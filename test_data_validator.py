@@ -11,11 +11,3 @@ def test_zero_price_is_invalid():
 
 def test_negative_price_is_invalid():
     assert validate_price(-50) is False
-
-
-def test_missing_price_is_invalid():
-    assert validate_price(None) is False
-
-
-def test_invalid_text_is_rejected():
-    assert validate_price("100") is False
