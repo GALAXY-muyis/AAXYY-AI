@@ -7,6 +7,7 @@ def analyze_trade(
     moving_average,
     volume,
     average_volume,
+    previous_price,
     entry_price,
     stop_loss,
     take_profit
@@ -20,7 +21,8 @@ def analyze_trade(
         price,
         moving_average,
         volume,
-        average_volume
+        average_volume,
+        previous_price
     )
 
     risk = calculate_risk(
@@ -32,6 +34,7 @@ def analyze_trade(
     return {
         "signal": market["signal"],
         "volume_status": market["volume_status"],
+        "momentum": market["momentum"],
         "confidence": market["confidence"],
         "risk": risk["risk"],
         "reward": risk["reward"],
