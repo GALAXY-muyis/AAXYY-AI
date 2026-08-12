@@ -1,3 +1,6 @@
+from momentum import calculate_momentum
+
+
 def generate_signal(price, moving_average):
     """
     Generate a basic trading signal from price and moving average.
@@ -12,9 +15,15 @@ def generate_signal(price, moving_average):
     return "HOLD"
 
 
-def analyze_market(price, moving_average, volume, average_volume):
+def analyze_market(
+    price,
+    moving_average,
+    volume,
+    average_volume,
+    previous_price
+):
     """
-    Analyze price trend and volume to produce a structured signal.
+    Analyze trend, volume, and momentum.
     """
 
     signal = generate_signal(price, moving_average)
@@ -24,17 +33,24 @@ def analyze_market(price, moving_average, volume, average_volume):
     else:
         volume_status = "LOW"
 
-    if signal == "BUY" and volume_status == "HIGH":
-        confidence = 80
-    elif signal == "SELL" and volume_status == "HIGH":
-        confidence = 80
+    momentum = calculate_momentum(price, previous_price)
+
+    if signal == "BUY" and momentum > 0 and volume_status == "HIGH":
+        confidence = 90
+    elif signal == "SELL" and momentum < 0 and volume_status == "HIGH":
+        confidence = 90
+    elif signal == "BUY" and momentum > 0:
+        confidence = 75
+    elif signal == "SELL" and momentum < 0:
+        confidence = 75
     elif signal != "HOLD":
-        confidence = 60
+        confidence = 50
     else:
         confidence = 40
 
     return {
         "signal": signal,
         "volume_status": volume_status,
+        "momentum": momentum,
         "confidence": confidence
     }
