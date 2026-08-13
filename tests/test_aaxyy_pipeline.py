@@ -21,7 +21,12 @@ def test_strong_buy_pipeline():
     assert result["volume_status"] == "HIGH"
     assert result["trade_quality"]["quality"] == "STRONG"
     assert result["conflict"]["status"] == "ALIGNED"
+
     assert result["position_size"] == 4
+    assert result["targets"]["stop_loss"] == 105
+    assert result["targets"]["risk_per_unit"] == 5
+    assert result["targets"]["take_profit"] == 125
+
     assert result["final_decision"] == "STRONG BUY"
 
 
@@ -44,6 +49,7 @@ def test_conflicting_buy_pipeline():
     assert result["market_regime"] == "BEARISH"
     assert result["conflict"]["status"] == "CONFLICT"
     assert result["position_size"] == 4
+    assert result["targets"]["take_profit"] == 105
     assert result["final_decision"] == "CAUTION"
 
 
@@ -65,4 +71,5 @@ def test_hold_pipeline():
 
     assert result["market_regime"] == "SIDEWAYS"
     assert result["position_size"] == 8
+    assert result["targets"]["take_profit"] == 100
     assert result["final_decision"] == "WAIT"
