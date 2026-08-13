@@ -2,6 +2,7 @@ from market_regime import detect_market_regime
 from trade_quality import calculate_trade_quality
 from signal_conflict import detect_signal_conflict
 from trade_decision import make_trade_decision
+from position_sizer import calculate_position_size
 
 
 def run_aaxyy_pipeline(
@@ -13,6 +14,10 @@ def run_aaxyy_pipeline(
     confidence,
     risk_reward,
     momentum,
+    account_balance,
+    risk_percent,
+    entry_price,
+    stop_loss,
 ):
     market = detect_market_regime(
         price,
@@ -49,6 +54,13 @@ def run_aaxyy_pipeline(
         market_regime=market["regime"],
     )
 
+    position_size = calculate_position_size(
+        account_balance=account_balance,
+        risk_percent=risk_percent,
+        entry_price=entry_price,
+        stop_loss=stop_loss,
+    )
+
     if conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
     else:
@@ -60,5 +72,6 @@ def run_aaxyy_pipeline(
         "trade_quality": quality,
         "conflict": conflict,
         "decision": decision,
+        "position_size": position_size,
         "final_decision": final_decision,
-  }
+    }
