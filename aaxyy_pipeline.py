@@ -3,6 +3,7 @@ from trade_quality import calculate_trade_quality
 from signal_conflict import detect_signal_conflict
 from trade_decision import make_trade_decision
 from position_sizer import calculate_position_size
+from risk_targets import calculate_trade_targets
 
 
 def run_aaxyy_pipeline(
@@ -61,6 +62,13 @@ def run_aaxyy_pipeline(
         stop_loss=stop_loss,
     )
 
+    targets = calculate_trade_targets(
+        entry_price=entry_price,
+        stop_loss=stop_loss,
+        risk_reward_ratio=risk_reward,
+        signal=signal,
+    )
+
     if conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
     else:
@@ -73,5 +81,6 @@ def run_aaxyy_pipeline(
         "conflict": conflict,
         "decision": decision,
         "position_size": position_size,
+        "targets": targets,
         "final_decision": final_decision,
     }
