@@ -36,7 +36,7 @@ def analyze_market(
     momentum = calculate_momentum(price, previous_price)
 
     if signal == "BUY":
-    if momentum > 0 and volume_status == "HIGH":
+        if momentum > 0 and volume_status == "HIGH":
         confidence = 90
     elif momentum > 0:
         confidence = 75
