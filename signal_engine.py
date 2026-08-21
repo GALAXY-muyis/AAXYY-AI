@@ -1,4 +1,4 @@
-8def generate_signal(price, moving_average):
+def generate_signal(price, moving_average):
     """
     Generate a basic trading signal from price vs moving average.
     """
