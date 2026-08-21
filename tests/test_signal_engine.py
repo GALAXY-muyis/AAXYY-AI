@@ -48,8 +48,13 @@ def test_buy_with_negative_momentum_has_lower_confidence():
     assert result["volume_status"] == "HIGH"
     assert result["momentum"] < 0
     assert result["confidence"] == 50
-    def test_sell_with_positive_momentum_has_lower_confidence():
-        result = analyze_market(90, 100, 2000, 1000, 85)
+def test_sell_with_positive_momentum_has_lower_confidence():
+    result = analyze_market(90, 100, 2000, 1000, 85)
+
+    assert result["signal"] == "SELL"
+    assert result["volume_status"] == "HIGH"
+    assert result["momentum"] > 0
+    assert result["confidence"] == 50
 
     assert result["signal"] == "SELL"
     assert result["volume_status"] == "HIGH"
