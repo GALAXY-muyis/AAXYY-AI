@@ -72,17 +72,14 @@ def analyze_market(
         moving_average,
     )
 
-    if volume > average_volume:
+    i    if volume > average_volume:
         volume_status = "HIGH"
-else:
-    volume_status = "LOW"
+    else:
+        volume_status = "LOW"
 
-    momentum = price - previous_price 
+    momentum = price - previous_price
     if momentum < 0 and signal == "BUY":
-    signal = "SELL"
-elif momentum > 0 and signal == "SELL":
-    signal = "BUY"
-    signal = "SELL"
+        signal = "SELL"
 elif momentum > 0 and signal == "SELL":
     signal = "BUY"
 
