@@ -73,7 +73,7 @@ def analyze_market(
     )
 
     if volume > average_volume:
-    volume_status = "HIGH"
+        volume_status = "HIGH"
 else:
     volume_status = "LOW"
 
