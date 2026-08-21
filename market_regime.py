@@ -1,7 +1,7 @@
 def detect_market_regime(price, moving_average, momentum):
-    if price > moving_average and momentum > 0:
+    if price > moving_average:
         regime = "BULLISH"
-    elif price < moving_average and momentum < 0:
+    elif price < moving_average:
         regime = "BEARISH"
     else:
         regime = "SIDEWAYS"
