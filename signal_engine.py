@@ -78,11 +78,6 @@ def analyze_market(
 
     momentum = price - previous_price
 
-    if momentum < 0 and signal == "BUY":
-        signal = "SELL"
-    elif momentum > 0 and signal == "SELL":
-        signal = "BUY"
-
     if signal == "BUY":
         if momentum > 0 and volume_status == "HIGH":
             confidence = 90
@@ -115,11 +110,10 @@ def analyze_market(
 
     return {
         "signal": signal,
-        "volume_status": 
+        "volume_status":
     volume_status,
         "momentum": momentum,
         "confidence": confidence,
         "explanation": 
     explanation,
     }
-    
