@@ -65,14 +65,12 @@ def analyze_market(
     """
     Analyze market conditions using price, moving average,
     volume and price momentum.
-    """
-
-    signal = generate_signal(
+        signal = generate_signal(
         price,
         moving_average,
     )
 
-        if volume > average_volume:
+    if volume > average_volume:
         volume_status = "HIGH"
     else:
         volume_status = "LOW"
@@ -80,9 +78,10 @@ def analyze_market(
     momentum = price - previous_price
     if momentum < 0 and signal == "BUY":
         signal = "SELL"
-elif momentum > 0 and signal == "SELL":
-    signal = "BUY"
+    elif momentum > 0 and signal == "SELL":
+        signal = "BUY"
 
+    if signal == "BUY":
     if signal == "BUY":
         if momentum > 0 and volume_status == "HIGH":
             confidence = 90
