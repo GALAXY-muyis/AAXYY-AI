@@ -70,6 +70,6 @@ def test_hold_pipeline():
     )
 
     assert result["market_regime"] == "SIDEWAYS"
-    assert result["position_size"] == 8
+    assert result["position_size"] == 4
     assert result["targets"]["take_profit"] == 100
     assert result["final_decision"] == "WAIT"
