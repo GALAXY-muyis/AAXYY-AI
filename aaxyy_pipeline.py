@@ -67,10 +67,20 @@ def run_aaxyy_pipeline(
         entry_price=entry_price,
         stop_loss=stop_loss,
         risk_reward_ratio=risk_reward,
+        signal=signal,    risk_gate = check_risk_gate(
         signal=signal,
+    risk_reward=risk_reward,
+        stop_loss=stop_loss,
+        entry_price=entry_price,
+        position_size=position_size,
+        conflict_status=conflict["status"],
+        trade_quality=quality["quality"],
+    )
     )
 
-    if conflict["status"] == "CONFLICT":
+        if not risk_gate["allowed"]:
+        final_decision = "NO TRADE"
+    elif conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
     else:
         final_decision = decision["decision"]
@@ -83,5 +93,6 @@ def run_aaxyy_pipeline(
         "decision": decision,
         "position_size": position_size,
         "targets": targets,
-        "final_decision": final_decision,
-    }
+        "risk_gate": risk_gate,
+        "final_decision": 
+    final_decision,
