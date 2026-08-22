@@ -77,7 +77,9 @@ def run_aaxyy_pipeline(
     )
     )
 
-        if not risk_gate["allowed"]:
+            )
+
+    if not risk_gate["allowed"]:
         final_decision = "NO TRADE"
     elif conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
