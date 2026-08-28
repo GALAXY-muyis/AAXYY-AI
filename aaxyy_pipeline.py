@@ -80,10 +80,15 @@ def run_aaxyy_pipeline(
         trade_quality=quality["quality"],
     )
 
-    if not risk_gate["allowed"]:
+        if signal == "HOLD":
+        final_decision = "WAIT"
+    elif conflict["status"] == "CONFLICT":
+        final_decision = "CAUTION"
+    elif not risk_gate["allowed"]:
         final_decision = "NO TRADE"
     else:
-        final_decision = decision["decision"]
+        final_decision = 
+decision["decision"]
 
     return {
         "market_regime": market["regime"],
