@@ -70,7 +70,7 @@ def run_aaxyy_pipeline(
         signal=signal,
     )
 
-   risk_gate = check_risk_gate(
+    risk_gate = check_risk_gate(
         signal=signal,
         risk_reward=risk_reward,
         stop_loss=stop_loss,
