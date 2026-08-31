@@ -87,10 +87,12 @@ def run_aaxyy_pipeline(
         consecutive_losses=consecutive_losses,
         daily_loss_percent=daily_loss_percent,
     )
-    if signal == "HOLD":
+    i    if signal == "HOLD":
         final_decision = "WAIT"
     elif conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
+    elif not trading_guard["allowed"]:
+        final_decision = "NO TRADE"
     elif not risk_gate["allowed"]:
         final_decision = "NO TRADE"
     else:
