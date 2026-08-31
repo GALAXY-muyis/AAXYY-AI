@@ -82,12 +82,12 @@ def run_aaxyy_pipeline(
         conflict_status=conflict["status"],
         trade_quality=quality["quality"],
     )
-            trading_guard = check_trading_guard(
+    trading_guard = check_trading_guard(
         trades_today=trades_today,
         consecutive_losses=consecutive_losses,
         daily_loss_percent=daily_loss_percent,
     )
-    i    if signal == "HOLD":
+        if signal == "HOLD":
         final_decision = "WAIT"
     elif conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
