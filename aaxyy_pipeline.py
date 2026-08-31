@@ -105,7 +105,7 @@ def run_aaxyy_pipeline(
         "conflict": conflict,
         "decision": decision,
         "position_size": position_size,
-        "targets": targets,
+                "targets": targets,
         "risk_gate": risk_gate,
-        "final_decision":final_decision,
-    }
+        "trading_guard": trading_guard,
+        "final_decision": final_decision,
