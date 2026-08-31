@@ -5,7 +5,7 @@ from trade_decision import make_trade_decision
 from position_sizer import calculate_position_size
 from risk_targets import calculate_trade_targets
 from risk_gate import check_risk_gate
-
+from trading_guard import check_trading_guard
 
 def run_aaxyy_pipeline(
     price,
