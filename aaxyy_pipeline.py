@@ -7,6 +7,7 @@ from risk_targets import calculate_trade_targets
 from risk_gate import check_risk_gate
 from trading_guard import check_trading_guard
 
+
 def run_aaxyy_pipeline(
     price,
     moving_average,
@@ -82,8 +83,8 @@ def run_aaxyy_pipeline(
         conflict_status=conflict["status"],
         trade_quality=quality["quality"],
     )
-            trading_guard = 
-        check_trading_guard(
+
+    trading_guard = check_trading_guard(
         trades_today=trades_today,
         consecutive_losses=consecutive_losses,
         daily_loss_percent=daily_loss_percent,
@@ -107,7 +108,8 @@ def run_aaxyy_pipeline(
         "conflict": conflict,
         "decision": decision,
         "position_size": position_size,
-                "targets": targets,
+        "targets": targets,
         "risk_gate": risk_gate,
         "trading_guard": trading_guard,
         "final_decision": final_decision,
+    }
