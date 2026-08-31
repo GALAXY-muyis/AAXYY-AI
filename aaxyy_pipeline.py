@@ -20,6 +20,9 @@ def run_aaxyy_pipeline(
     risk_percent,
     entry_price,
     stop_loss,
+    trades_today=0,
+    consecutive_losses=0,
+    daily_loss_percent=0,
 ):
     market = detect_market_regime(
         price,
