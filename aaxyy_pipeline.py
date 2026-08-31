@@ -88,7 +88,7 @@ trading_guard = check_trading_guard(
         daily_loss_percent=daily_loss_percent,
     )
 
-if signal == "HOLD":
+    if signal == "HOLD":
         final_decision = "WAIT"
     elif conflict["status"] == "CONFLICT":
         final_decision = "CAUTION"
