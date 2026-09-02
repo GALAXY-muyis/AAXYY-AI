@@ -37,3 +37,21 @@ def test_scanner_analysis_and_ranking_work_together():
     assert ranked[0]["symbol"] == "BTC"
     assert ranked[1]["symbol"] == "ETH"
     assert ranked[0]["scan_score"] == 100
+def test_scanner_pipeline_flow():
+    scanner = MarketScanner(None)
+
+    markets = [
+        {
+            "symbol": "BTC",
+            "price": 110,
+            "moving_average": 100,
+            "volume": 2000,
+            "average_volume": 1000,
+            "previous_price": 105,
+        }
+    ]
+
+    analyzed = scanner.analyze_markets(markets)
+
+    assert analyzed[0]["signal"] == "BUY"
+    assert analyzed[0]["confidence"] == 90
