@@ -4,33 +4,36 @@ from aaxyy_pipeline import run_aaxyy_pipeline
 from paper_trading_executor import PaperTradingExecutor
 
 
-def test_aaxyy_end_to_end_paper_trade():
-    market_data = get_market_data("bitcoin")
-
+def run_end_to_end_test(
+    signal,
+    price,
+    moving_average,
+    volume,
+    average_volume,
+    previous_price,
+):
     analysis = analyze_market(
-        price=market_data["current_price"],
-        moving_average=market_data["moving_average"],
-        volume=market_data["current_volume"],
-        average_volume=market_data["average_volume"],
-        previous_price=market_data["previous_price"],
+        price=price,
+        moving_average=moving_average,
+        volume=volume,
+        average_volume=average_volume,
+        previous_price=previous_price,
     )
 
-    entry_price = market_data["current_price"]
+    entry_price = price
 
-    if analysis["signal"] == "BUY":
+    if signal == "BUY":
         stop_loss = entry_price * 0.98
-    elif analysis["signal"] == "SELL":
-        stop_loss = entry_price * 1.02
     else:
-        stop_loss = entry_price
+        stop_loss = entry_price * 1.02
 
     result = run_aaxyy_pipeline(
-        price=entry_price,
-        moving_average=market_data["moving_average"],
-        volume=market_data["current_volume"],
-        average_volume=market_data["average_volume"],
-        signal=analysis["signal"],
-        confidence=analysis["confidence"],
+        price=price,
+        moving_average=moving_average,
+        volume=volume,
+        average_volume=average_volume,
+        signal=signal,
+        confidence=90,
         risk_reward=3,
         momentum=analysis["momentum"],
         account_balance=1000,
@@ -50,7 +53,7 @@ def test_aaxyy_end_to_end_paper_trade():
 
         trade = executor.open_position(
             symbol="BTC",
-            side=analysis["signal"],
+            side=signal,
             entry_price=entry_price,
             quantity=result["position_size"],
             stop_loss=result["targets"]["stop_loss"],
@@ -58,4 +61,41 @@ def test_aaxyy_end_to_end_paper_trade():
         )
 
         assert trade["status"] == "OPENED"
+        assert trade["side"] == signal
         assert executor.position is not None
+
+        return executor
+
+    return None
+
+
+def test_aaxyy_end_to_end_buy():
+    market_data = get_market_data("bitcoin")
+
+    executor = run_end_to_end_test(
+        signal="BUY",
+        price=market_data["current_price"],
+        moving_average=market_data["current_price"] - 1,
+        volume=market_data["current_volume"],
+        average_volume=market_data["average_volume"],
+        previous_price=market_data["current_price"] - 1,
+    )
+
+    assert executor is not None
+    assert executor.position.side == "BUY"
+
+
+def test_aaxyy_end_to_end_sell():
+    market_data = get_market_data("bitcoin")
+
+    executor = run_end_to_end_test(
+        signal="SELL",
+        price=market_data["current_price"],
+        moving_average=market_data["current_price"] + 1,
+        volume=market_data["current_volume"],
+        average_volume=market_data["average_volume"],
+        previous_price=market_data["current_price"] + 1,
+    )
+
+    assert executor is not None
+    assert executor.position.side == "SELL"
