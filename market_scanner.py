@@ -1,4 +1,3 @@
-
 from market_data_validator import validate_market_data
 from signal_engine import analyze_market
 from aaxyy_pipeline import run_aaxyy_pipeline
@@ -125,7 +124,7 @@ class MarketScanner:
 
         return results
 
-        def rank_markets(self, markets):
+    def rank_markets(self, markets):
         """Rank markets from strongest to weakest opportunity."""
 
         ranked_markets = []
