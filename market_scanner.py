@@ -143,6 +143,25 @@ class MarketScanner:
 
             ranked_markets.append(result)
 
+     def rank_markets(self, markets):
+        """Rank valid markets from strongest to weakest opportunity."""
+
+        ranked_markets = []
+
+        for market in markets:
+            score = calculate_scan_score(
+                confidence=market["confidence"],
+                trade_quality=market["trade_quality"]["quality"],
+                risk_reward=market["targets"]["risk_reward"],
+                market_regime=market["market_regime"],
+                conflict_status=market["conflict"]["status"],
+            )
+
+            result = dict(market)
+            result["scan_score"] = score
+
+            ranked_markets.append(result)
+
         ranked_markets.sort(
             key=lambda item: item["scan_score"],
             reverse=True,
