@@ -46,27 +46,29 @@ def run_end_to_end_test(
     assert "risk_gate" in result
     assert "trading_guard" in result
 
-    if result["final_decision"] in ("STRONG BUY", "STRONG SELL"):
-        executor = PaperTradingExecutor(
-            starting_balance=1000
-        )
+    assert result["final_decision"] in (
+        "STRONG BUY",
+        "STRONG SELL",
+    )
 
-        trade = executor.open_position(
-            symbol="BTC",
-            side=signal,
-            entry_price=entry_price,
-            quantity=result["position_size"],
-            stop_loss=result["targets"]["stop_loss"],
-            take_profit=result["targets"]["take_profit"],
-        )
+    executor = PaperTradingExecutor(
+        starting_balance=1000
+    )
 
-        assert trade["status"] == "OPENED"
-        assert trade["side"] == signal
-        assert executor.position is not None
+    trade = executor.open_position(
+        symbol="BTC",
+        side=signal,
+        entry_price=entry_price,
+        quantity=result["position_size"],
+        stop_loss=result["targets"]["stop_loss"],
+        take_profit=result["targets"]["take_profit"],
+    )
 
-        return executor
+    assert trade["status"] == "OPENED"
+    assert trade["side"] == signal
+    assert executor.position is not None
 
-    return None
+    return executor
 
 
 def test_aaxyy_end_to_end_buy():
@@ -76,12 +78,11 @@ def test_aaxyy_end_to_end_buy():
         signal="BUY",
         price=market_data["current_price"],
         moving_average=market_data["current_price"] - 1,
-        volume=market_data["current_volume"],
-        average_volume=market_data["average_volume"],
+        volume=2000,
+        average_volume=1000,
         previous_price=market_data["current_price"] - 1,
     )
 
-    assert executor is not None
     assert executor.position.side == "BUY"
 
 
@@ -92,10 +93,9 @@ def test_aaxyy_end_to_end_sell():
         signal="SELL",
         price=market_data["current_price"],
         moving_average=market_data["current_price"] + 1,
-        volume=market_data["current_volume"],
-        average_volume=market_data["average_volume"],
+        volume=2000,
+        average_volume=1000,
         previous_price=market_data["current_price"] + 1,
     )
 
-    assert executor is not None
     assert executor.position.side == "SELL"
