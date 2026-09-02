@@ -77,3 +77,40 @@ def test_scanner_run_pipeline():
 
     assert analyzed[0]["signal"] == "BUY"
     assert analyzed[0]["confidence"] == 90
+def test_scanner_full_opportunity_flow():
+    scanner = MarketScanner(None)
+
+    markets = [
+        {
+            "symbol": "BTC",
+            "price": 110,
+            "moving_average": 100,
+            "volume": 2000,
+            "average_volume": 1000,
+            "previous_price": 105,
+        },
+        {
+            "symbol": "ETH",
+            "price": 102,
+            "moving_average": 100,
+            "volume": 1000,
+            "average_volume": 1000,
+            "previous_price": 100,
+        },
+    ]
+
+    analyzed = scanner.analyze_markets(markets)
+    pipeline_results = scanner.run_pipeline(analyzed)
+
+    for market in pipeline_results:
+        market["trade_quality"] = "STRONG"
+        market["risk_reward"] = 3
+        market["market_regime"] = "BULLISH"
+        market["conflict_status"] = "ALIGNED"
+
+    ranked = scanner.rank_markets(pipeline_results)
+
+    assert len(ranked) == 2
+    assert ranked[0]["symbol"] == "BTC"
+    assert ranked[1]["symbol"] == "ETH"
+    assert ranked[0]["scan_score"] == 100
