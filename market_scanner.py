@@ -1,7 +1,7 @@
 from market_data_validator import validate_market_data
 from signal_engine import analyze_market
 from signal_engine import analyze_market
-
+from aaxyy_pipeline import run_aaxyy_pipeline
 
 def calculate_scan_score(
     confidence,
@@ -69,7 +69,42 @@ class MarketScanner:
         """Analyze validated markets using the signal engine."""
 
         analyzed_markets = []
+    def run_pipeline(self, markets):
+        """Run analyzed markets through the AAXYY pipeline."""
 
+        results = []
+
+        for market in markets:
+            entry_price = market["price"]
+
+            if market["signal"] == "BUY":
+                stop_loss = entry_price * 0.98
+            elif market["signal"] == "SELL":
+                stop_loss = entry_price * 1.02
+            else:
+                stop_loss = entry_price
+
+            result = run_aaxyy_pipeline(
+                price=market["price"],
+                moving_average=market["moving_average"],
+                volume=market["volume"],
+                average_volume=market["average_volume"],
+                signal=market["signal"],
+                confidence=market["confidence"],
+                risk_reward=3,
+                momentum=market["momentum"],
+                account_balance=1000,
+                risk_percent=2,
+                entry_price=entry_price,
+                stop_loss=stop_loss,
+            )
+
+            combined = dict(market)
+            combined.update(result)
+
+            results.append(combined)
+
+        return results
         for market in markets:
             analysis = analyze_market(
                 price=market["price"],
