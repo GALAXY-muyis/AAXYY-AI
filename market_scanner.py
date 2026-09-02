@@ -125,18 +125,33 @@ class MarketScanner:
 
         return results
 
-    def rank_markets(self, markets):
-        """Rank valid markets from strongest to weakest opportunity."""
+        def rank_markets(self, markets):
+        """Rank markets from strongest to weakest opportunity."""
 
         ranked_markets = []
 
         for market in markets:
+            if isinstance(market["trade_quality"], dict):
+                trade_quality = market["trade_quality"]["quality"]
+            else:
+                trade_quality = market["trade_quality"]
+
+            if "targets" in market:
+                risk_reward = market["targets"]["risk_reward"]
+            else:
+                risk_reward = market["risk_reward"]
+
+            if "conflict" in market:
+                conflict_status = market["conflict"]["status"]
+            else:
+                conflict_status = market["conflict_status"]
+
             score = calculate_scan_score(
                 confidence=market["confidence"],
-                trade_quality=market["trade_quality"]["quality"],
-                risk_reward=market["targets"]["risk_reward"],
+                trade_quality=trade_quality,
+                risk_reward=risk_reward,
                 market_regime=market["market_regime"],
-                conflict_status=market["conflict"]["status"],
+                conflict_status=conflict_status,
             )
 
             result = dict(market)
