@@ -100,6 +100,20 @@ def main():
             print(f"Stop Loss: {trade['stop_loss']}")
             print(f"Take Profit: {trade['take_profit']}")
 
+            exit_result = executor.check_exit(price)
+
+            if exit_result is not None:
+                print("\nPAPER TRADE EXIT")
+                print("----------------")
+                print(f"Reason: {exit_result['reason']}")
+                print(f"Exit Price: {exit_result['exit_price']}")
+                print(f"PnL: {exit_result['pnl']:.2f}")
+                print(f"Balance: {exit_result['balance_after']:.2f}")
+            else:
+                print("\nPAPER TRADE STATUS")
+                print("----------------")
+                print("Position remains open.")
+
         else:
             print("\nPAPER TRADE")
             print("----------------")
