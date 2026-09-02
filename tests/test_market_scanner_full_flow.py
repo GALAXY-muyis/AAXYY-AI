@@ -102,11 +102,15 @@ def test_scanner_full_opportunity_flow():
     analyzed = scanner.analyze_markets(markets)
     pipeline_results = scanner.run_pipeline(analyzed)
 
-    for market in pipeline_results:
-        market["trade_quality"] = "STRONG"
-        market["risk_reward"] = 3
-        market["market_regime"] = "BULLISH"
-        market["conflict_status"] = "ALIGNED"
+        analyzed = scanner.analyze_markets(markets)
+    pipeline_results = scanner.run_pipeline(analyzed)
+
+    assert pipeline_results[0]["trade_quality"]["quality"] == "STRONG"
+    assert pipeline_results[0]["market_regime"] == "BULLISH"
+    assert pipeline_results[0]["conflict"]["status"] == "ALIGNED"
+    assert pipeline_results[0]["targets"]["risk_reward"] == 3
+
+    ranked = scanner.rank_markets(pipeline_results)
 
     ranked = scanner.rank_markets(pipeline_results)
 
