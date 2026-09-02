@@ -7,7 +7,7 @@ def test_scanner_analysis_and_ranking_work_together():
     markets = [
         {
             "symbol": "ETH",
-            "price": 105,
+            "price": 102,
             "moving_average": 100,
             "volume": 1200,
             "average_volume": 1000,
