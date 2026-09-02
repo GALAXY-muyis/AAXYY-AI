@@ -130,12 +130,12 @@ class MarketScanner:
         ranked_markets = []
 
         for market in markets:
-            score = calculate_scan_score(
+                    score = calculate_scan_score(
                 confidence=market["confidence"],
-                trade_quality=market["trade_quality"],
-                risk_reward=market["risk_reward"],
+                trade_quality=market["trade_quality"]["quality"],
+                risk_reward=market["targets"]["risk_reward"],
                 market_regime=market["market_regime"],
-                conflict_status=market["conflict_status"],
+                conflict_status=market["conflict"]["status"],
             )
 
             result = dict(market)
