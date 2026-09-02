@@ -1,4 +1,6 @@
 from market_data_validator import validate_market_data
+from signal_engine import analyze_market
+from signal_engine import analyze_market
 
 
 def calculate_scan_score(
@@ -63,7 +65,26 @@ class MarketScanner:
                 valid_markets.append(data)
 
         return valid_markets
+    def analyze_markets(self, markets):
+        """Analyze validated markets using the signal engine."""
 
+        analyzed_markets = []
+
+        for market in markets:
+            analysis = analyze_market(
+                price=market["price"],
+                moving_average=market["moving_average"],
+                volume=market["volume"],
+                average_volume=market["average_volume"],
+                previous_price=market["previous_price"],
+            )
+
+            result = dict(market)
+            result.update(analysis)
+
+            analyzed_markets.append(result)
+
+        return analyzed_markets
     def rank_markets(self, markets):
         """Rank valid markets from strongest to weakest opportunity."""
 
