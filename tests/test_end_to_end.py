@@ -99,3 +99,51 @@ def test_aaxyy_end_to_end_sell():
     )
 
     assert executor.position.side == "SELL"
+def test_aaxyy_buy_trade_hits_take_profit():
+    market_data = get_market_data("bitcoin")
+
+    executor = run_end_to_end_test(
+        signal="BUY",
+        price=market_data["current_price"],
+        moving_average=market_data["current_price"] - 1,
+        volume=2000,
+        average_volume=1000,
+        previous_price=market_data["current_price"] - 1,
+    )
+
+    entry_price = executor.position.entry_price
+    take_profit = executor.position.take_profit
+
+    result = executor.check_exit(take_profit)
+
+    assert result is not None
+    assert result["reason"] == "TAKE_PROFIT"
+    assert result["exit_price"] == take_profit
+    assert result["pnl"] > 0
+    assert executor.position is None
+    assert executor.balance > executor.starting_balance
+
+
+def test_aaxyy_sell_trade_hits_stop_loss():
+    market_data = get_market_data("bitcoin")
+
+    executor = run_end_to_end_test(
+        signal="SELL",
+        price=market_data["current_price"],
+        moving_average=market_data["current_price"] + 1,
+        volume=2000,
+        average_volume=1000,
+        previous_price=market_data["current_price"] + 1,
+    )
+
+    entry_price = executor.position.entry_price
+    stop_loss = executor.position.stop_loss
+
+    result = executor.check_exit(stop_loss)
+
+    assert result is not None
+    assert result["reason"] == "STOP_LOSS"
+    assert result["exit_price"] == stop_loss
+    assert result["pnl"] < 0
+    assert executor.position is None
+    assert executor.balance < executor.starting_balance
