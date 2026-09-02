@@ -1,4 +1,3 @@
-from market_data import get_market_data
 from signal_engine import analyze_market
 from aaxyy_pipeline import run_aaxyy_pipeline
 from paper_trading_executor import PaperTradingExecutor
@@ -72,46 +71,41 @@ def run_end_to_end_test(
 
 
 def test_aaxyy_end_to_end_buy():
-    market_data = get_market_data("bitcoin")
-
     executor = run_end_to_end_test(
         signal="BUY",
-        price=market_data["current_price"],
-        moving_average=market_data["current_price"] - 1,
+        price=100,
+        moving_average=99,
         volume=2000,
         average_volume=1000,
-        previous_price=market_data["current_price"] - 1,
+        previous_price=99,
     )
 
     assert executor.position.side == "BUY"
 
 
 def test_aaxyy_end_to_end_sell():
-    market_data = get_market_data("bitcoin")
-
     executor = run_end_to_end_test(
         signal="SELL",
-        price=market_data["current_price"],
-        moving_average=market_data["current_price"] + 1,
+        price=100,
+        moving_average=101,
         volume=2000,
         average_volume=1000,
-        previous_price=market_data["current_price"] + 1,
+        previous_price=101,
     )
 
     assert executor.position.side == "SELL"
-def test_aaxyy_buy_trade_hits_take_profit():
-    market_data = get_market_data("bitcoin")
 
+
+def test_aaxyy_buy_trade_hits_take_profit():
     executor = run_end_to_end_test(
         signal="BUY",
-        price=market_data["current_price"],
-        moving_average=market_data["current_price"] - 1,
+        price=100,
+        moving_average=99,
         volume=2000,
         average_volume=1000,
-        previous_price=market_data["current_price"] - 1,
+        previous_price=99,
     )
 
-    entry_price = executor.position.entry_price
     take_profit = executor.position.take_profit
 
     result = executor.check_exit(take_profit)
@@ -125,18 +119,15 @@ def test_aaxyy_buy_trade_hits_take_profit():
 
 
 def test_aaxyy_sell_trade_hits_stop_loss():
-    market_data = get_market_data("bitcoin")
-
     executor = run_end_to_end_test(
         signal="SELL",
-        price=market_data["current_price"],
-        moving_average=market_data["current_price"] + 1,
+        price=100,
+        moving_average=101,
         volume=2000,
         average_volume=1000,
-        previous_price=market_data["current_price"] + 1,
+        previous_price=101,
     )
 
-    entry_price = executor.position.entry_price
     stop_loss = executor.position.stop_loss
 
     result = executor.check_exit(stop_loss)
