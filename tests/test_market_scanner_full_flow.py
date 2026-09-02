@@ -50,7 +50,29 @@ def test_scanner_pipeline_flow():
             "previous_price": 105,
         }
     ]
+def test_scanner_run_pipeline():
+    scanner = MarketScanner(None)
 
+    markets = [
+        {
+            "symbol": "BTC",
+            "price": 110,
+            "moving_average": 100,
+            "volume": 2000,
+            "average_volume": 1000,
+            "previous_price": 105,
+        }
+    ]
+
+    analyzed = scanner.analyze_markets(markets)
+    result = scanner.run_pipeline(analyzed)
+
+    assert len(result) == 1
+    assert result[0]["symbol"] == "BTC"
+    assert result[0]["signal"] == "BUY"
+    assert "risk_gate" in result[0]
+    assert "trading_guard" in result[0]
+    assert "final_decision" in result[0]
     analyzed = scanner.analyze_markets(markets)
 
     assert analyzed[0]["signal"] == "BUY"
