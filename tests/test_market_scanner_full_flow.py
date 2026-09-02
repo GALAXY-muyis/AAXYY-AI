@@ -118,3 +118,34 @@ def test_scanner_full_opportunity_flow():
     assert ranked[0]["symbol"] == "BTC"
     assert ranked[1]["symbol"] == "ETH"
     assert ranked[0]["scan_score"] == 100
+def test_scan_opportunities_returns_ranked_markets():
+    scanner = MarketScanner(None)
+
+    markets = [
+        {
+            "symbol": "BTC",
+            "price": 110,
+            "moving_average": 100,
+            "volume": 2000,
+            "average_volume": 1000,
+            "previous_price": 105,
+        },
+        {
+            "symbol": "ETH",
+            "price": 102,
+            "moving_average": 100,
+            "volume": 1000,
+            "average_volume": 1000,
+            "previous_price": 100,
+        },
+    ]
+
+    scanner.scan = lambda symbols: markets
+
+    result = scanner.scan_opportunities(["BTC", "ETH"])
+
+    assert len(result) == 2
+    assert result[0]["symbol"] == "BTC"
+    assert result[1]["symbol"] == "ETH"
+    assert "scan_score" in result[0]
+    assert "final_decision" in result[0]
