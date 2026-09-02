@@ -102,7 +102,7 @@ def test_scanner_full_opportunity_flow():
     analyzed = scanner.analyze_markets(markets)
     pipeline_results = scanner.run_pipeline(analyzed)
 
-        analyzed = scanner.analyze_markets(markets)
+    analyzed = scanner.analyze_markets(markets)
     pipeline_results = scanner.run_pipeline(analyzed)
 
     assert pipeline_results[0]["trade_quality"]["quality"] == "STRONG"
