@@ -9,7 +9,7 @@ def test_scanner_analysis_and_ranking_work_together():
             "symbol": "ETH",
             "price": 102,
             "moving_average": 100,
-            "volume": 1200,
+            "volume": 1000,
             "average_volume": 1000,
             "previous_price": 100,
         },
