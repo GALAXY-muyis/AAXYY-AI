@@ -185,4 +185,21 @@ class MarketScanner:
         )
 
         return ranked_markets
+        def select_best_opportunity(self, opportunities):
+        """Select the highest-ranked valid opportunity."""
 
+        valid_opportunities = [
+            opportunity
+            for opportunity in opportunities
+            if opportunity.get("valid", False)
+        ]
+
+        if not valid_opportunities:
+            return None
+
+        valid_opportunities.sort(
+            key=lambda item: item.get("scan_score", 0),
+            reverse=True,
+        )
+
+        return valid_opportunities[0]
