@@ -1,5 +1,7 @@
 from trade_guard import validate_trade
 from trade_setup import build_trade_setup
+from risk_gate import check_risk_gate
+from trading_guard import check_trading_guard
 
 
 def process_trade_signal(
