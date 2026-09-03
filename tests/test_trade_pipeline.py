@@ -252,3 +252,35 @@ def test_paper_position_preserves_opportunity_risk_targets():
     assert result["status"] == "OPENED"
     assert result["stop_loss"] == 145
     assert result["take_profit"] == 165
+def test_approved_sell_opportunity_opens_paper_position():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "SOLUSDT",
+        "valid": True,
+        "signal": "SELL",
+        "confidence": 95,
+        "entry_price": 150,
+        "stop_loss": 155,
+        "take_profit": 135,
+        "position_size": 0.1,
+        "risk_reward": 3.0,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is True
+    assert result["status"] == "OPENED"
+    assert result["symbol"] == "SOLUSDT"
+    assert result["side"] == "SELL"
+    assert result["stop_loss"] == 155
+    assert result["take_profit"] == 135
