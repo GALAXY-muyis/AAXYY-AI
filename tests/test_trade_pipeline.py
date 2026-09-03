@@ -136,3 +136,33 @@ def test_approve_trade_opportunity_rejects_trading_guard_failure():
 
     assert result["approved"] is False
     assert "Maximum daily trade limit reached." in result["reason"]
+def test_approved_opportunity_can_be_sent_to_paper_trading():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "take_profit": 3250,
+        "position_size": 0.1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is True
+    assert result["status"] == "OPENED"
+    assert result["symbol"] == "ETHUSDT"
+    assert result["side"] == "BUY"
