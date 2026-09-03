@@ -41,3 +41,29 @@ def test_selected_opportunity_passes_risk_gate_and_trading_guard():
     assert risk_result["allowed"] is True
     assert trading_result["allowed"] is True
     assert approved is True
+from trade_pipeline import approve_trade_opportunity
+
+
+def test_approve_trade_opportunity_returns_safety_approved():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "position_size": 1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = approve_trade_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    )
+
+    assert result["approved"] is True
+    assert result["reason"] == "SAFETY_APPROVED"
