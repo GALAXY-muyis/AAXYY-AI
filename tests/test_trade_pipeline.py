@@ -90,3 +90,26 @@ def test_approve_trade_opportunity_rejects_invalid_opportunity():
 
     assert result["approved"] is False
     assert result["reason"] == "INVALID_OPPORTUNITY"
+def test_approve_trade_opportunity_rejects_risk_gate_failure():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "position_size": 1,
+        "risk_reward": 1.0,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = approve_trade_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    )
+
+    assert result["approved"] is False
+    assert result["reason"] == "RISK_REWARD_TOO_LOW"
