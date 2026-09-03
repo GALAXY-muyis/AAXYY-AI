@@ -222,3 +222,33 @@ def test_trading_guard_rejection_does_not_open_paper_position():
 
     assert result["approved"] is False
     assert "Maximum daily trade limit reached." in result["reason"]
+def test_paper_position_preserves_opportunity_risk_targets():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "SOLUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 150,
+        "stop_loss": 145,
+        "take_profit": 165,
+        "position_size": 0.1,
+        "risk_reward": 3.0,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is True
+    assert result["status"] == "OPENED"
+    assert result["stop_loss"] == 145
+    assert result["take_profit"] == 165
