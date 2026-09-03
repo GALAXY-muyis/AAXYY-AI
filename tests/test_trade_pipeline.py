@@ -284,3 +284,32 @@ def test_approved_sell_opportunity_opens_paper_position():
     assert result["side"] == "SELL"
     assert result["stop_loss"] == 155
     assert result["take_profit"] == 135
+def test_paper_execution_uses_risk_based_quantity():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "BTCUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 100,
+        "stop_loss": 95,
+        "take_profit": 110,
+        "position_size": 999,
+        "risk_reward": 2.0,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is True
+    assert result["status"] == "OPENED"
+    assert result["quantity"] == 2.0
