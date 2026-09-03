@@ -123,7 +123,17 @@ class MarketScanner:
             results.append(combined)
 
         return results
+    def scan_opportunities(self, symbols):
+        """Scan, analyze, run the pipeline, and rank markets."""
 
+        markets = self.scan(symbols)
+        analyzed = self.analyze_markets(markets)
+        pipeline_results = self.run_pipeline(analyzed)
+
+        for market in pipeline_results:
+            market["risk_reward"] = market["targets"]["risk_reward"]
+
+        return self.rank_markets(pipeline_results)
     def rank_markets(self, markets):
         """Rank markets from strongest to weakest opportunity."""
 
