@@ -194,3 +194,31 @@ def test_rejected_opportunity_does_not_open_paper_position():
 
     assert result["approved"] is False
     assert result["reason"] == "RISK_REWARD_TOO_LOW"
+def test_trading_guard_rejection_does_not_open_paper_position():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "take_profit": 3250,
+        "position_size": 0.1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=3,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is False
+    assert "Maximum daily trade limit reached." in result["reason"]
