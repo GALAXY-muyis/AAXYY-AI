@@ -67,3 +67,26 @@ def test_approve_trade_opportunity_returns_safety_approved():
 
     assert result["approved"] is True
     assert result["reason"] == "SAFETY_APPROVED"
+def test_approve_trade_opportunity_rejects_invalid_opportunity():
+    opportunity = {
+        "symbol": "BTCUSDT",
+        "valid": False,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 100000,
+        "stop_loss": 99000,
+        "position_size": 1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = approve_trade_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    )
+
+    assert result["approved"] is False
+    assert result["reason"] == "INVALID_OPPORTUNITY"
