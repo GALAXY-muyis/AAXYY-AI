@@ -185,7 +185,7 @@ class MarketScanner:
         )
 
         return ranked_markets
-        def select_best_opportunity(self, opportunities):
+    def select_best_opportunity(self, opportunities):
         """Select the highest-ranked valid opportunity."""
 
         valid_opportunities = [
