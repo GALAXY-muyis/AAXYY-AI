@@ -58,3 +58,53 @@ def process_trade_signal(
         "setup": setup,
         "leverage": leverage,
     }
+def approve_trade_opportunity(
+    opportunity,
+    trades_today,
+    consecutive_losses,
+    daily_loss_percent,
+):
+    """
+    Run a selected opportunity through AAXYY's safety gates.
+
+    No exchange order is placed here.
+    """
+
+    if not opportunity.get("valid", False):
+        return {
+            "approved": False,
+            "reason": "INVALID_OPPORTUNITY",
+        }
+
+    risk_result = check_risk_gate(
+        signal=opportunity["signal"],
+        risk_reward=opportunity["risk_reward"],
+        stop_loss=opportunity["stop_loss"],
+        entry_price=opportunity["entry_price"],
+        position_size=opportunity["position_size"],
+        conflict_status=opportunity["conflict_status"],
+        trade_quality=opportunity["trade_quality"],
+    )
+
+    if not risk_result["allowed"]:
+        return {
+            "approved": False,
+            "reason": risk_result["reason"],
+        }
+
+    trading_result = check_trading_guard(
+        trades_today=trades_today,
+        consecutive_losses=consecutive_losses,
+        daily_loss_percent=daily_loss_percent,
+    )
+
+    if not trading_result["allowed"]:
+        return {
+            "approved": False,
+            "reason": trading_result["reasons"],
+        }
+
+    return {
+        "approved": True,
+        "reason": "SAFETY_APPROVED",
+    }
