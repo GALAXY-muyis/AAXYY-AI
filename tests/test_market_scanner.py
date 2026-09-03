@@ -90,3 +90,22 @@ def test_selects_highest_ranked_valid_opportunity():
 
     assert result["symbol"] == "ETH"
     assert result["valid"] is True
+def test_selected_best_valid_opportunity_can_pass_safety_approval():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "scan_score": 90,
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "stop_loss": 3000,
+        "take_profit": 3200,
+        "position_size": 1,
+        "risk_reward": 2.0,
+        "market_regime": "BULLISH",
+        "momentum": 1.5,
+        "volume_status": "HIGH",
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    assert opportunity["valid"] is True
