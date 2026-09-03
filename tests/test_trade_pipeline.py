@@ -166,3 +166,31 @@ def test_approved_opportunity_can_be_sent_to_paper_trading():
     assert result["status"] == "OPENED"
     assert result["symbol"] == "ETHUSDT"
     assert result["side"] == "BUY"
+def test_rejected_opportunity_does_not_open_paper_position():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "take_profit": 3250,
+        "position_size": 0.1,
+        "risk_reward": 1.0,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = execute_approved_opportunity(
+        opportunity=opportunity,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+        risk_percent=1.0,
+        starting_balance=1000,
+    )
+
+    assert result["approved"] is False
+    assert result["reason"] == "RISK_REWARD_TOO_LOW"
