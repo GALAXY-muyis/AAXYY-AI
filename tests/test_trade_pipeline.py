@@ -341,3 +341,33 @@ def test_invalid_stop_loss_does_not_open_paper_position():
 
     assert result["approved"] is False
     assert result["reason"] == "INVALID_STOP_LOSS"
+def test_invalid_starting_balance_does_not_open_paper_position():
+    from trade_pipeline import execute_approved_opportunity
+
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "take_profit": 3250,
+        "position_size": 0.1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    try:
+        result = execute_approved_opportunity(
+            opportunity=opportunity,
+            trades_today=0,
+            consecutive_losses=0,
+            daily_loss_percent=0,
+            risk_percent=1.0,
+            starting_balance=0,
+        )
+    except ValueError:
+        return
+
+    assert result["approved"] is False
