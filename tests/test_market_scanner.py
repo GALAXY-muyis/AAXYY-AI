@@ -40,3 +40,28 @@ def test_market_scanner_scans_multiple_symbols():
     assert len(result) == 2
     assert result[0]["symbol"] == "BTC"
     assert result[1]["symbol"] == "ETH"
+def test_selects_highest_ranked_valid_opportunity():
+    scanner = MarketScanner(FakeDataProvider())
+
+    opportunities = [
+        {
+            "symbol": "BTC",
+            "scan_score": 95,
+            "valid": False,
+        },
+        {
+            "symbol": "ETH",
+            "scan_score": 90,
+            "valid": True,
+        },
+        {
+            "symbol": "SOL",
+            "scan_score": 85,
+            "valid": True,
+        },
+    ]
+
+    result = scanner.select_best_opportunity(opportunities)
+
+    assert result["symbol"] == "ETH"
+    assert result["valid"] is True
