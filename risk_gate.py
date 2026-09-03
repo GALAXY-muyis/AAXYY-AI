@@ -18,7 +18,17 @@ def check_risk_gate(
             "allowed": False,
             "reason": "INVALID_STOP_LOSS",
         }
+    if signal == "BUY" and stop_loss >= entry_price:
+        return {
+            "allowed": False,
+            "reason": "INVALID_STOP_LOSS",
+        }
 
+    if signal == "SELL" and stop_loss <= entry_price:
+        return {
+            "allowed": False,
+            "reason": "INVALID_STOP_LOSS",
+        }
     if position_size <= 0:
         return {
             "allowed": False,
