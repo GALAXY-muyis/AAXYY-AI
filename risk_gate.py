@@ -2,6 +2,7 @@ def check_risk_gate(
     signal,
     risk_reward,
     stop_loss,
+    take_profit,
     entry_price,
     position_size,
     conflict_status,
