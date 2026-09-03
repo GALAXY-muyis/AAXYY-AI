@@ -164,3 +164,36 @@ def test_selected_opportunity_is_rejected_when_trading_guard_fails():
     assert opportunity["valid"] is True
     assert risk_gate_result["allowed"] is True
     assert trading_guard_result["allowed"] is False
+def test_selected_opportunity_is_approved_when_safety_checks_pass():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "scan_score": 90,
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "stop_loss": 3000,
+        "take_profit": 3200,
+        "position_size": 1,
+        "risk_reward": 2.0,
+        "market_regime": "BULLISH",
+        "momentum": 1.5,
+        "volume_status": "HIGH",
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    risk_gate_result = {
+        "allowed": True,
+    }
+
+    trading_guard_result = {
+        "allowed": True,
+    }
+
+    approved = (
+        opportunity["valid"]
+        and risk_gate_result["allowed"]
+        and trading_guard_result["allowed"]
+    )
+
+    assert approved is True
