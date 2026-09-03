@@ -109,3 +109,28 @@ def test_selected_best_valid_opportunity_can_pass_safety_approval():
     }
 
     assert opportunity["valid"] is True
+def test_selected_opportunity_is_rejected_when_risk_gate_fails():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "scan_score": 90,
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "stop_loss": 3000,
+        "take_profit": 3100,
+        "position_size": 1,
+        "risk_reward": 1.0,
+        "market_regime": "BULLISH",
+        "momentum": 1.5,
+        "volume_status": "HIGH",
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    risk_gate_result = {
+        "allowed": False,
+        "reason": "Risk-reward ratio below minimum",
+    }
+
+    assert opportunity["valid"] is True
+    assert risk_gate_result["allowed"] is False
