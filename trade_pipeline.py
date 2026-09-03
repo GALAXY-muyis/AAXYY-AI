@@ -2,7 +2,7 @@ from trade_guard import validate_trade
 from trade_setup import build_trade_setup
 from risk_gate import check_risk_gate
 from trading_guard import check_trading_guard
-
+from paper_trading_executor import PaperTradingExecutor
 
 def process_trade_signal(
     account_balance,
@@ -107,4 +107,57 @@ def approve_trade_opportunity(
     return {
         "approved": True,
         "reason": "SAFETY_APPROVED",
+    }
+def execute_approved_opportunity(
+    opportunity,
+    trades_today,
+    consecutive_losses,
+    daily_loss_percent,
+    risk_percent=1.0,
+    starting_balance=1000.0,
+):
+    """
+    Safely execute an approved opportunity in paper trading only.
+
+    No exchange order is placed here.
+    """
+
+    approval = approve_trade_opportunity(
+        opportunity=opportunity,
+        trades_today=trades_today,
+        consecutive_losses=consecutive_losses,
+        daily_loss_percent=daily_loss_percent,
+    )
+
+    if not approval["approved"]:
+        return approval
+
+    executor = PaperTradingExecutor(
+        starting_balance=starting_balance,
+    )
+
+    quantity = executor.calculate_quantity(
+        entry_price=opportunity["entry_price"],
+        stop_loss=opportunity["stop_loss"],
+        risk_percent=risk_percent,
+    )
+
+    result = executor.open_position(
+        symbol=opportunity["symbol"],
+        side=opportunity["signal"],
+        entry_price=opportunity["entry_price"],
+        quantity=quantity,
+        stop_loss=opportunity.get("stop_loss"),
+        take_profit=opportunity.get("take_profit"),
+    )
+
+    return {
+        "approved": True,
+        "status": result["status"],
+        "symbol": result["symbol"],
+        "side": result["side"],
+        "entry_price": result["entry_price"],
+        "quantity": result["quantity"],
+        "stop_loss": result["stop_loss"],
+        "take_profit": result["take_profit"],
     }
