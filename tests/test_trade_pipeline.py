@@ -113,3 +113,26 @@ def test_approve_trade_opportunity_rejects_risk_gate_failure():
 
     assert result["approved"] is False
     assert result["reason"] == "RISK_REWARD_TOO_LOW"
+def test_approve_trade_opportunity_rejects_trading_guard_failure():
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "valid": True,
+        "signal": "BUY",
+        "confidence": 95,
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "position_size": 1,
+        "risk_reward": 2.5,
+        "conflict_status": "ALIGNED",
+        "trade_quality": "STRONG",
+    }
+
+    result = approve_trade_opportunity(
+        opportunity=opportunity,
+        trades_today=3,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    )
+
+    assert result["approved"] is False
+    assert "Maximum daily trade limit reached." in result["reason"]
