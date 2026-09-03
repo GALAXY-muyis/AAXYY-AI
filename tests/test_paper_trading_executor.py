@@ -224,3 +224,35 @@ def test_trade_history_returns_completed_trades():
     assert history[0]["symbol"] == "BTC"
     assert history[0]["side"] == "BUY"
     assert history[0]["pnl"] == 20
+def test_safety_approved_opportunity_can_open_paper_position():
+    from paper_trading_executor import PaperTradingExecutor
+
+    opportunity = {
+        "symbol": "ETHUSDT",
+        "signal": "BUY",
+        "entry_price": 3000,
+        "stop_loss": 2900,
+        "take_profit": 3250,
+    }
+
+    executor = PaperTradingExecutor(starting_balance=1000)
+
+    quantity = executor.calculate_quantity(
+        entry_price=opportunity["entry_price"],
+        stop_loss=opportunity["stop_loss"],
+        risk_percent=1.0,
+    )
+
+    result = executor.open_position(
+        symbol=opportunity["symbol"],
+        side=opportunity["signal"],
+        entry_price=opportunity["entry_price"],
+        quantity=quantity,
+        stop_loss=opportunity["stop_loss"],
+        take_profit=opportunity["take_profit"],
+    )
+
+    assert result["status"] == "OPENED"
+    assert result["symbol"] == "ETHUSDT"
+    assert result["side"] == "BUY"
+    assert executor.position is not None
