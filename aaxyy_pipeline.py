@@ -81,7 +81,7 @@ def run_aaxyy_pipeline(
         signal=signal,
         risk_reward=risk_reward,
         stop_loss=stop_loss,
-take_profit=targets["take_profit"],
+        take_profit=targets["take_profit"],
         entry_price=entry_price,
 position_size=position_size,
 conflict_status=conflict["status"],
