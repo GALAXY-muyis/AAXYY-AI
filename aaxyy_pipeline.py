@@ -338,15 +338,16 @@ trades_today = 0, consecutive_losses = 0, daily_loss_percent = 0
             signal=signal,
         )
     
->       risk_gate = check_risk_gate(
-            signal=signal,
-            risk_reward=risk_reward,
-            stop_loss=stop_loss,
-            entry_price=entry_price,
-            position_size=position_size,
-            conflict_status=conflict["status"],
-            trade_quality=quality["quality"],
-        )
+risk_gate = check_risk_gate(
+    signal=signal,
+    risk_reward=risk_reward,
+    stop_loss=stop_loss,
+    take_profit=targets["take_profit"],
+    entry_price=entry_price,
+    position_size=position_size,
+    conflict_status=conflict["status"],
+    trade_quality=quality["quality"],
+)
 E       TypeError: check_risk_gate() missing 1 required positional argument: 'take_profit'
 
 aaxyy_pipeline.py:77: TypeError
