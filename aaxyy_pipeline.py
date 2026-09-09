@@ -77,20 +77,21 @@ def run_aaxyy_pipeline(
     
 
 
-     risk_gate = check_risk_gate(
+    risk_gate = check_risk_gate(
         signal=signal,
         risk_reward=risk_reward,
         stop_loss=stop_loss,
         take_profit=targets["take_profit"],
         entry_price=entry_price,
-position_size=position_size,
-conflict_status=conflict["status"],
-trade_quality=quality["quality"],
-    )   
-     trading_guard = check_trading_guard(
-trades_today=trades_today,
-consecutive_losses=consecutive_losses,
-daily_loss_percent=daily_loss_percent,
+        position_size=position_size,
+        conflict_status=conflict["status"],
+        trade_quality=quality["quality"],
+    )
+
+    trading_guard = check_trading_guard(
+        trades_today=trades_today,
+        consecutive_losses=consecutive_losses,
+        daily_loss_percent=daily_loss_percent,
     )
 
     if signal == "HOLD":
