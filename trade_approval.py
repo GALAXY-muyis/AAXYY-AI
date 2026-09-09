@@ -14,6 +14,7 @@ def check_trade_approval(
         signal=opportunity["signal"],
         risk_reward=opportunity["risk_reward"],
         stop_loss=opportunity["stop_loss"],
+        take_profit=opportunity["take_profit"],
         entry_price=opportunity["entry_price"],
         position_size=opportunity["position_size"],
         conflict_status=opportunity["conflict_status"],
