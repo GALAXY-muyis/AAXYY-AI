@@ -1,6 +1,7 @@
 import time
 
 from bitget_market_data_provider import BitgetMarketDataProvider
+from bitget_market_universe import BitgetMarketUniverse
 from market_scanner import MarketScanner
 from paper_trading_executor import PaperTradingExecutor
 
@@ -10,11 +11,10 @@ class PaperTradingRunner:
 
     def __init__(
         self,
-        symbols,
+        symbols=None,
         starting_balance=1000,
         sleep_function=time.sleep,
     ):
-        self.symbols = symbols
         self.sleep_function = sleep_function
 
         self.provider = BitgetMarketDataProvider(
@@ -27,6 +27,15 @@ class PaperTradingRunner:
         self.executor = PaperTradingExecutor(
             starting_balance=starting_balance,
         )
+
+        if symbols is None:
+            universe = BitgetMarketUniverse(
+                max_symbols=250,
+            )
+
+            self.symbols = universe.get_symbols()
+        else:
+            self.symbols = symbols
 
     def find_best_opportunity(self):
         """Scan markets and return the strongest valid opportunity."""
