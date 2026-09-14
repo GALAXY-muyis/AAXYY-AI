@@ -32,6 +32,28 @@ def main():
             print(f"Stop Loss: {trade['stop_loss']}")
             print(f"Take Profit: {trade['take_profit']}")
 
+            monitoring = runner.monitor_open_position()
+
+            print("\nPAPER TRADE MONITOR")
+            print("------------------------------")
+
+            if monitoring["status"] == "PAPER_TRADE_CLOSED":
+                exit_result = monitoring["exit"]
+
+                print("Status: PAPER TRADE CLOSED")
+                print(f"Reason: {exit_result['reason']}")
+                print(f"Exit Price: {exit_result['exit_price']}")
+                print(f"PnL: {exit_result['pnl']:.2f}")
+                print(
+                    f"Balance: "
+                    f"{exit_result['balance_after']:.2f}"
+                )
+
+            elif monitoring["status"] == "POSITION_OPEN":
+                print("Status: POSITION REMAINS OPEN")
+                print(f"Current Price: {monitoring['current_price']}")
+                print(f"Unrealized PnL: {monitoring['pnl']:.2f}")
+
         else:
             print("Status: NO PAPER TRADE")
             print(f"Reason: {result['reason']}")
