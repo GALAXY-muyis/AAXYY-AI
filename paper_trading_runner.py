@@ -35,7 +35,7 @@ class PaperTradingRunner:
 
         if symbols is None:
             universe = BitgetMarketUniverse(
-                max_symbols=50,
+                max_symbols=20,
             )
 
             self.symbols = universe.get_symbols()
