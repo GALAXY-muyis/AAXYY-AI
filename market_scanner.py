@@ -138,6 +138,18 @@ class MarketScanner:
             combined = dict(market)
             combined.update(result)
 
+            risk_gate_allowed = result["risk_gate"]["allowed"]
+            trading_guard_allowed = result["trading_guard"][
+                "allowed"
+            ]
+
+            combined["valid"] = (
+                risk_gate_allowed
+                and trading_guard_allowed
+                and result["final_decision"]
+                in ("STRONG BUY", "STRONG SELL")
+            )
+
             results.append(combined)
 
         return results
