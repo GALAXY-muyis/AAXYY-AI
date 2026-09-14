@@ -48,16 +48,50 @@ class PaperTradingRunner:
             opportunities
         )
 
-    
     def open_best_paper_trade(self):
         """Open the best valid opportunity as a paper trade."""
 
-        opportunity = self.find_best_opportunity()
+        opportunities = self.scanner.scan_opportunities(
+            self.symbols
+        )
+
+        opportunity = self.scanner.select_best_opportunity(
+            opportunities
+        )
 
         if opportunity is None:
+            top_candidates = []
+
+            for candidate in opportunities[:5]:
+                top_candidates.append(
+                    {
+                        "symbol": candidate.get("symbol"),
+                        "signal": candidate.get("signal"),
+                        "confidence": candidate.get("confidence"),
+                        "trade_quality": candidate.get(
+                            "trade_quality"
+                        ),
+                        "risk_reward": candidate.get(
+                            "risk_reward"
+                        ),
+                        "scan_score": candidate.get(
+                            "scan_score"
+                        ),
+                        "valid": candidate.get("valid"),
+                        "final_decision": candidate.get(
+                            "final_decision"
+                        ),
+                    }
+                )
+
             return {
                 "status": "NO_TRADE",
                 "reason": "NO_VALID_OPPORTUNITY",
+                "diagnostic": {
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(opportunities),
+                    "top_candidates": top_candidates,
+                },
             }
 
         if opportunity["final_decision"] not in (
@@ -68,22 +102,30 @@ class PaperTradingRunner:
                 "status": "NO_TRADE",
                 "reason": opportunity["final_decision"],
                 "diagnostic": {
-                    "symbol": opportunity.get("symbol"),
-                    "signal": opportunity.get("signal"),
-                    "confidence": opportunity.get("confidence"),
-                    "trade_quality": opportunity.get(
-                        "trade_quality"
-                    ),
-                    "risk_reward": opportunity.get(
-                        "risk_reward"
-                    ),
-                    "scan_score": opportunity.get(
-                        "scan_score"
-                    ),
-                    "valid": opportunity.get("valid"),
-                    "final_decision": opportunity.get(
-                        "final_decision"
-                    ),
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(opportunities),
+                    "top_candidates": [
+                        {
+                            "symbol": opportunity.get("symbol"),
+                            "signal": opportunity.get("signal"),
+                            "confidence": opportunity.get(
+                                "confidence"
+                            ),
+                            "trade_quality": opportunity.get(
+                                "trade_quality"
+                            ),
+                            "risk_reward": opportunity.get(
+                                "risk_reward"
+                            ),
+                            "scan_score": opportunity.get(
+                                "scan_score"
+                            ),
+                            "valid": opportunity.get("valid"),
+                            "final_decision": opportunity.get(
+                                "final_decision"
+                            ),
+                        }
+                    ],
                 },
             }
 
@@ -101,6 +143,7 @@ class PaperTradingRunner:
             "trade": trade,
             "opportunity": opportunity,
         }
+
     def monitor_open_position(self):
         """Check the open paper position against the latest market price."""
 
@@ -166,4 +209,4 @@ class PaperTradingRunner:
         return {
             "status": "MONITORING_LIMIT_REACHED",
             "last_status": last_status,
-            }
+        }
