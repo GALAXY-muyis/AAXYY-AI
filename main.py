@@ -7,11 +7,7 @@ def main():
     print("------------------------------")
 
     runner = PaperTradingRunner(
-        symbols=[
-            "BTC",
-            "ETH",
-            "SOL",
-        ],
+        symbols=None,
         starting_balance=1000,
     )
 
