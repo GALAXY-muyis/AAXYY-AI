@@ -1,3 +1,5 @@
+import time
+
 from bitget_market_data_provider import BitgetMarketDataProvider
 from market_scanner import MarketScanner
 from paper_trading_executor import PaperTradingExecutor
@@ -10,8 +12,10 @@ class PaperTradingRunner:
         self,
         symbols,
         starting_balance=1000,
+        sleep_function=time.sleep,
     ):
         self.symbols = symbols
+        self.sleep_function = sleep_function
 
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
@@ -100,11 +104,20 @@ class PaperTradingRunner:
             "pnl": self.executor.calculate_pnl(current_price),
         }
 
-    def monitor_until_exit(self, max_checks=5):
+    def monitor_until_exit(
+        self,
+        max_checks=5,
+        interval_seconds=60,
+    ):
         """Monitor an open paper position for a limited number of checks."""
 
         if max_checks <= 0:
             raise ValueError("max_checks must be greater than zero.")
+
+        if interval_seconds < 0:
+            raise ValueError(
+                "interval_seconds cannot be negative."
+            )
 
         if self.executor.position is None:
             return {
@@ -114,11 +127,14 @@ class PaperTradingRunner:
 
         last_status = None
 
-        for _ in range(max_checks):
+        for check_number in range(max_checks):
             last_status = self.monitor_open_position()
 
             if last_status["status"] == "PAPER_TRADE_CLOSED":
                 return last_status
+
+            if check_number < max_checks - 1:
+                self.sleep_function(interval_seconds)
 
         return {
             "status": "MONITORING_LIMIT_REACHED",
