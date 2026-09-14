@@ -1,4 +1,3 @@
-
 import time
 
 from bitget_market_data_provider import BitgetMarketDataProvider
@@ -17,6 +16,7 @@ class PaperTradingRunner:
         sleep_function=time.sleep,
     ):
         self.sleep_function = sleep_function
+        self.last_opportunities = []
 
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
@@ -41,12 +41,12 @@ class PaperTradingRunner:
     def find_best_opportunity(self):
         """Scan markets and return the strongest valid opportunity."""
 
-        opportunities = self.scanner.scan_opportunities(
+        self.last_opportunities = self.scanner.scan_opportunities(
             self.symbols
         )
 
         return self.scanner.select_best_opportunity(
-            opportunities
+            self.last_opportunities
         )
 
     def open_best_paper_trade(self):
@@ -55,9 +55,49 @@ class PaperTradingRunner:
         opportunity = self.find_best_opportunity()
 
         if opportunity is None:
+            top_candidates = []
+
+            for candidate in self.last_opportunities[:5]:
+                trade_quality = candidate.get(
+                    "trade_quality"
+                )
+
+                if isinstance(trade_quality, dict):
+                    trade_quality = trade_quality.get(
+                        "quality"
+                    )
+
+                top_candidates.append(
+                    {
+                        "symbol": candidate.get("symbol"),
+                        "signal": candidate.get("signal"),
+                        "confidence": candidate.get(
+                            "confidence"
+                        ),
+                        "trade_quality": trade_quality,
+                        "risk_reward": candidate.get(
+                            "risk_reward"
+                        ),
+                        "scan_score": candidate.get(
+                            "scan_score"
+                        ),
+                        "valid": candidate.get("valid"),
+                        "final_decision": candidate.get(
+                            "final_decision"
+                        ),
+                    }
+                )
+
             return {
                 "status": "NO_TRADE",
                 "reason": "NO_VALID_OPPORTUNITY",
+                "diagnostic": {
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(
+                        self.last_opportunities
+                    ),
+                    "top_candidates": top_candidates,
+                },
             }
 
         if opportunity["final_decision"] not in (
@@ -68,22 +108,38 @@ class PaperTradingRunner:
                 "status": "NO_TRADE",
                 "reason": opportunity["final_decision"],
                 "diagnostic": {
-                    "symbol": opportunity.get("symbol"),
-                    "signal": opportunity.get("signal"),
-                    "confidence": opportunity.get("confidence"),
-                    "trade_quality": opportunity.get(
-                        "trade_quality"
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(
+                        self.last_opportunities
                     ),
-                    "risk_reward": opportunity.get(
-                        "risk_reward"
-                    ),
-                    "scan_score": opportunity.get(
-                        "scan_score"
-                    ),
-                    "valid": opportunity.get("valid"),
-                    "final_decision": opportunity.get(
-                        "final_decision"
-                    ),
+                    "top_candidates": [
+                        {
+                            "symbol": opportunity.get(
+                                "symbol"
+                            ),
+                            "signal": opportunity.get(
+                                "signal"
+                            ),
+                            "confidence": opportunity.get(
+                                "confidence"
+                            ),
+                            "trade_quality": opportunity.get(
+                                "trade_quality"
+                            ),
+                            "risk_reward": opportunity.get(
+                                "risk_reward"
+                            ),
+                            "scan_score": opportunity.get(
+                                "scan_score"
+                            ),
+                            "valid": opportunity.get(
+                                "valid"
+                            ),
+                            "final_decision": opportunity.get(
+                                "final_decision"
+                            ),
+                        }
+                    ],
                 },
             }
 
