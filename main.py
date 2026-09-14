@@ -67,9 +67,49 @@ def main():
                         f"{last_status['pnl']:.2f}"
                     )
 
-        else:
+                else:
             print("Status: NO PAPER TRADE")
             print(f"Reason: {result['reason']}")
+
+            diagnostic = result.get("diagnostic")
+
+            if diagnostic:
+                print("\nAAXYY SCAN DIAGNOSTIC")
+                print("------------------------------")
+                print(
+                    f"Markets Scanned: "
+                    f"{diagnostic.get('markets_scanned')}"
+                )
+                print(
+                    f"Opportunities Found: "
+                    f"{diagnostic.get('opportunities_found')}"
+                )
+
+                candidates = diagnostic.get(
+                    "top_candidates",
+                    [],
+                )
+
+                if candidates:
+                    print("\nTOP CANDIDATES")
+
+                    for candidate in candidates:
+                        print(
+                            f"{candidate.get('symbol')} | "
+                            f"Signal: {candidate.get('signal')} | "
+                            f"Confidence: "
+                            f"{candidate.get('confidence')} | "
+                            f"Quality: "
+                            f"{candidate.get('trade_quality')} | "
+                            f"RR: "
+                            f"{candidate.get('risk_reward')} | "
+                            f"Score: "
+                            f"{candidate.get('scan_score')} | "
+                            f"Valid: "
+                            f"{candidate.get('valid')} | "
+                            f"Decision: "
+                            f"{candidate.get('final_decision')}"
+                        )
 
     except Exception as error:
         print("\nAAXYY AI ERROR")
