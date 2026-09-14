@@ -67,7 +67,7 @@ def main():
                         f"{last_status['pnl']:.2f}"
                     )
 
-                else:
+        else:
             print("Status: NO PAPER TRADE")
             print(f"Reason: {result['reason']}")
 
@@ -76,10 +76,12 @@ def main():
             if diagnostic:
                 print("\nAAXYY SCAN DIAGNOSTIC")
                 print("------------------------------")
+
                 print(
                     f"Markets Scanned: "
                     f"{diagnostic.get('markets_scanned')}"
                 )
+
                 print(
                     f"Opportunities Found: "
                     f"{diagnostic.get('opportunities_found')}"
@@ -92,6 +94,7 @@ def main():
 
                 if candidates:
                     print("\nTOP CANDIDATES")
+                    print("------------------------------")
 
                     for candidate in candidates:
                         print(
