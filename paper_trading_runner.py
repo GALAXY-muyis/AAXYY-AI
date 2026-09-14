@@ -69,3 +69,33 @@ class PaperTradingRunner:
             "trade": trade,
             "opportunity": opportunity,
         }
+
+    def monitor_open_position(self):
+        """Check the open paper position against the latest market price."""
+
+        if self.executor.position is None:
+            return {
+                "status": "NO_POSITION",
+                "reason": "NO_OPEN_POSITION",
+            }
+
+        symbol = self.executor.position.symbol
+
+        market_data = self.provider.get_market_data(symbol)
+
+        current_price = market_data["price"]
+
+        exit_result = self.executor.check_exit(current_price)
+
+        if exit_result is not None:
+            return {
+                "status": "PAPER_TRADE_CLOSED",
+                "exit": exit_result,
+            }
+
+        return {
+            "status": "POSITION_OPEN",
+            "symbol": symbol,
+            "current_price": current_price,
+            "pnl": self.executor.calculate_pnl(current_price),
+        }
