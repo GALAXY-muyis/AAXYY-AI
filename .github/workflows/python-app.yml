@@ -40,3 +40,10 @@ jobs:
     - name: Run AAXYY paper trading
       run: |
         python main.py
+    - name: Upload paper trade history
+      uses: actions/upload-artifact@v4
+      with:
+        name: aaxyy-paper-trade-history
+        path: paper_trade_history.json
+        if-no-files-found: ignore
+        retention-days: 90
