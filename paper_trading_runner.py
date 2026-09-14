@@ -3,6 +3,7 @@ import time
 from bitget_market_data_provider import BitgetMarketDataProvider
 from bitget_market_universe import BitgetMarketUniverse
 from market_scanner import MarketScanner
+from paper_trade_history import PaperTradeHistory
 from paper_trading_executor import PaperTradingExecutor
 
 
@@ -14,6 +15,7 @@ class PaperTradingRunner:
         symbols=None,
         starting_balance=1000,
         sleep_function=time.sleep,
+        history=None,
     ):
         self.sleep_function = sleep_function
         self.last_opportunities = []
@@ -28,6 +30,8 @@ class PaperTradingRunner:
         self.executor = PaperTradingExecutor(
             starting_balance=starting_balance,
         )
+
+        self.history = history or PaperTradeHistory()
 
         if symbols is None:
             universe = BitgetMarketUniverse(
@@ -176,6 +180,8 @@ class PaperTradingRunner:
         exit_result = self.executor.check_exit(current_price)
 
         if exit_result is not None:
+            self.history.append(exit_result)
+
             return {
                 "status": "PAPER_TRADE_CLOSED",
                 "exit": exit_result,
