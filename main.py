@@ -32,7 +32,10 @@ def main():
             print(f"Stop Loss: {trade['stop_loss']}")
             print(f"Take Profit: {trade['take_profit']}")
 
-            monitoring = runner.monitor_open_position()
+            monitoring = runner.monitor_until_exit(
+                max_checks=5,
+                interval_seconds=60,
+            )
 
             print("\nPAPER TRADE MONITOR")
             print("------------------------------")
@@ -49,10 +52,24 @@ def main():
                     f"{exit_result['balance_after']:.2f}"
                 )
 
-            elif monitoring["status"] == "POSITION_OPEN":
-                print("Status: POSITION REMAINS OPEN")
-                print(f"Current Price: {monitoring['current_price']}")
-                print(f"Unrealized PnL: {monitoring['pnl']:.2f}")
+            elif monitoring["status"] == "MONITORING_LIMIT_REACHED":
+                last_status = monitoring["last_status"]
+
+                print("Status: MONITORING LIMIT REACHED")
+                print(
+                    f"Last Status: "
+                    f"{last_status['status']}"
+                )
+
+                if last_status["status"] == "POSITION_OPEN":
+                    print(
+                        f"Current Price: "
+                        f"{last_status['current_price']}"
+                    )
+                    print(
+                        f"Unrealized PnL: "
+                        f"{last_status['pnl']:.2f}"
+                    )
 
         else:
             print("Status: NO PAPER TRADE")
