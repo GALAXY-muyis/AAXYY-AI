@@ -2,7 +2,7 @@ import requests
 
 
 class BitgetMarketUniverse:
-    """Discover liquid Bitget USDT perpetual futures markets."""
+    """Discover liquid and suitable Bitget USDT perpetual markets."""
 
     BASE_URL = "https://api.bitget.com"
     CONTRACTS_ENDPOINT = "/api/v2/mix/market/contracts"
@@ -17,7 +17,7 @@ class BitgetMarketUniverse:
         self.minimum_quote_volume = minimum_quote_volume
 
     def get_symbols(self):
-        """Return the most liquid eligible USDT perpetual markets."""
+        """Return the strongest eligible USDT perpetual markets."""
 
         contracts_response = requests.get(
             f"{self.BASE_URL}{self.CONTRACTS_ENDPOINT}",
@@ -45,6 +45,7 @@ class BitgetMarketUniverse:
             symbol = contract.get("symbol")
             symbol_type = contract.get("symbolType")
             symbol_status = contract.get("symbolStatus")
+            min_trade_usdt = contract.get("minTradeUSDT")
 
             if not symbol:
                 continue
@@ -58,11 +59,21 @@ class BitgetMarketUniverse:
             if not symbol.endswith("USDT"):
                 continue
 
+            try:
+                minimum_trade_value = float(
+                    min_trade_usdt
+                )
+            except (TypeError, ValueError):
+                continue
+
+            if minimum_trade_value <= 0:
+                continue
+
             eligible_symbols.add(symbol)
 
         if not eligible_symbols:
             raise ValueError(
-                "Bitget returned no eligible USDT perpetual markets."
+                "Bitget returned no suitable USDT perpetual markets."
             )
 
         ticker_response = requests.get(
