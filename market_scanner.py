@@ -49,22 +49,37 @@ class MarketScanner:
         self.data_provider = data_provider
 
     def scan(self, symbols):
-        valid_markets = []
+    """Scan multiple markets concurrently and return valid market data."""
 
-        for symbol in symbols:
-            data = self.data_provider.get_market_data(symbol)
+    from concurrent.futures import ThreadPoolExecutor
 
-            validation = validate_market_data(
-                price=data["price"],
-                moving_average=data["moving_average"],
-                volume=data["volume"],
-                average_volume=data["average_volume"],
-            )
+    def scan_symbol(symbol):
+        data = self.data_provider.get_market_data(symbol)
 
-            if validation["valid"]:
-                valid_markets.append(data)
+        validation = validate_market_data(
+            price=data["price"],
+            moving_average=data["moving_average"],
+            volume=data["volume"],
+            average_volume=data["average_volume"],
+        )
 
-        return valid_markets
+        if validation["valid"]:
+            return data
+
+        return None
+
+    max_workers = min(5, max(1, len(symbols)))
+
+    with ThreadPoolExecutor(
+        max_workers=max_workers
+    ) as executor:
+        results = executor.map(scan_symbol, symbols)
+
+    return [
+        result
+        for result in results
+        if result is not None
+    ]
 
     def analyze_markets(self, markets):
         """Analyze validated markets using the signal engine."""
