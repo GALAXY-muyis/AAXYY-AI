@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from market_data_validator import validate_market_data
 from signal_engine import analyze_market
 from aaxyy_pipeline import run_aaxyy_pipeline
@@ -49,37 +51,38 @@ class MarketScanner:
         self.data_provider = data_provider
 
     def scan(self, symbols):
-    """Scan multiple markets concurrently and return valid market data."""
+        """Scan multiple markets concurrently."""
 
-    from concurrent.futures import ThreadPoolExecutor
+        def scan_symbol(symbol):
+            data = self.data_provider.get_market_data(symbol)
 
-    def scan_symbol(symbol):
-        data = self.data_provider.get_market_data(symbol)
+            validation = validate_market_data(
+                price=data["price"],
+                moving_average=data["moving_average"],
+                volume=data["volume"],
+                average_volume=data["average_volume"],
+            )
 
-        validation = validate_market_data(
-            price=data["price"],
-            moving_average=data["moving_average"],
-            volume=data["volume"],
-            average_volume=data["average_volume"],
-        )
+            if validation["valid"]:
+                return data
 
-        if validation["valid"]:
-            return data
+            return None
 
-        return None
+        if not symbols:
+            return []
 
-    max_workers = min(5, max(1, len(symbols)))
+        max_workers = min(5, len(symbols))
 
-    with ThreadPoolExecutor(
-        max_workers=max_workers
-    ) as executor:
-        results = executor.map(scan_symbol, symbols)
+        with ThreadPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
+            results = executor.map(scan_symbol, symbols)
 
-    return [
-        result
-        for result in results
-        if result is not None
-    ]
+        return [
+            result
+            for result in results
+            if result is not None
+        ]
 
     def analyze_markets(self, markets):
         """Analyze validated markets using the signal engine."""
@@ -137,7 +140,8 @@ class MarketScanner:
 
             results.append(combined)
 
-        return results    
+        return results
+
     def scan_opportunities(self, symbols):
         """Scan, analyze, run the pipeline, and rank markets."""
 
@@ -149,17 +153,7 @@ class MarketScanner:
             market["risk_reward"] = market["targets"]["risk_reward"]
 
         return self.rank_markets(pipeline_results)
-    def scan_opportunities(self, symbols):
-        """Scan, analyze, run the pipeline, and rank markets."""
 
-        markets = self.scan(symbols)
-        analyzed = self.analyze_markets(markets)
-        pipeline_results = self.run_pipeline(analyzed)
-
-        for market in pipeline_results:
-            market["risk_reward"] = market["targets"]["risk_reward"]
-
-        return self.rank_markets(pipeline_results)
     def rank_markets(self, markets):
         """Rank markets from strongest to weakest opportunity."""
 
@@ -200,6 +194,7 @@ class MarketScanner:
         )
 
         return ranked_markets
+
     def select_best_opportunity(self, opportunities):
         """Select the highest-ranked valid opportunity."""
 
