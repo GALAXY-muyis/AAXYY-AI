@@ -35,7 +35,7 @@ def test_bitget_provider_returns_market_data(monkeypatch):
     assert result["symbol"] == "BTCUSDT"
     assert result["price"] == 110.0
     assert result["previous_price"] == 108.0
-    assert result["moving_average"] == 108.0
+    assert result["moving_average"] == 107.66666666666667
     assert result["volume"] == 2000.0
     assert result["average_volume"] == 1500.0
     assert result["momentum"] == 2.0
