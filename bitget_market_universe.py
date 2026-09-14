@@ -106,7 +106,7 @@ class BitgetMarketUniverse:
 
             try:
                 quote_volume = float(
-                    ticker.get("quoteVolume", 0)
+                    ticker.get("turnover24h", 0)
                 )
             except (TypeError, ValueError):
                 quote_volume = 0.0
