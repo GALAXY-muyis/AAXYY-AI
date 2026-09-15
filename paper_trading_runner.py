@@ -25,11 +25,6 @@ class PaperTradingRunner:
         self.history = history or PaperTradeHistory()
         self.state = state
 
-        self.provider = BitgetMarketDataProvider(
-            granularity="15m",
-            limit=50,
-        )
-
         if self.state is not None:
             saved_state = self.state.load()
             starting_balance = saved_state["balance"]
@@ -39,19 +34,26 @@ class PaperTradingRunner:
                 "position": None,
             }
 
+        self.provider = BitgetMarketDataProvider(
+            granularity="15m",
+            limit=50,
+        )
+
         self.scanner = MarketScanner(self.provider)
 
         self.executor = PaperTradingExecutor(
             starting_balance=starting_balance,
         )
-        if symbols is None:
-    universe = BitgetMarketUniverse(
-        max_symbols=20,
-    )
 
-    self.symbols = universe.get_symbols()
-   else:
-    self.symbols = symbols
+        if symbols is None:
+            universe = BitgetMarketUniverse(
+                max_symbols=20,
+            )
+
+            self.symbols = universe.get_symbols()
+        else:
+            self.symbols = symbols
+
         if saved_state["position"] is not None:
             saved_position = saved_state["position"]
 
