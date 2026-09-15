@@ -21,15 +21,37 @@ result = runner.open_best_paper_trade()
 
 print(f"Status: {result['status']}")
 
-if result["status"] == "PAPER_TRADE_OPENED":
-    trade = result["trade"]
+should_monitor = result["status"] == "PAPER_TRADE_OPENED"
 
-    print(f"Symbol: {trade['symbol']}")
-    print(f"Side: {trade['side']}")
-    print(f"Entry Price: {trade['entry_price']}")
-    print(f"Quantity: {trade['quantity']}")
-    print(f"Stop Loss: {trade['stop_loss']}")
-    print(f"Take Profit: {trade['take_profit']}")
+if (
+    result["status"] == "NO_TRADE"
+    and result.get("reason") == "POSITION_ALREADY_OPEN"
+):
+    should_monitor = True
+
+if should_monitor:
+
+    if result["status"] == "PAPER_TRADE_OPENED":
+        trade = result["trade"]
+
+        print(f"Symbol: {trade['symbol']}")
+        print(f"Side: {trade['side']}")
+        print(f"Entry Price: {trade['entry_price']}")
+        print(f"Quantity: {trade['quantity']}")
+        print(f"Stop Loss: {trade['stop_loss']}")
+        print(f"Take Profit: {trade['take_profit']}")
+
+    else:
+        position = runner.executor.position
+
+        print("RESTORED PAPER POSITION")
+        print("------------------------------")
+        print(f"Symbol: {position.symbol}")
+        print(f"Side: {position.side}")
+        print(f"Entry Price: {position.entry_price}")
+        print(f"Quantity: {position.quantity}")
+        print(f"Stop Loss: {position.stop_loss}")
+        print(f"Take Profit: {position.take_profit}")
 
     print()
     print("PAPER TRADE MONITOR")
