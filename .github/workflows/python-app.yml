@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build:
@@ -19,31 +20,104 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Restore previous paper trading state
+      if: github.event_name == 'push'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+
+        echo "Looking for previous successful AAXYY run..."
+
+        PREVIOUS_RUN_ID=$(
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/python-app.yml/runs?branch=main&status=success&per_page=10" |
+          jq -r --arg current "${{ github.run_id }}" \
+            '.workflow_runs[] | select(.id|tostring != $current) | .id' |
+          head -n 1
+        )
+
+        if [ -z "$PREVIOUS_RUN_ID" ]; then
+          echo "No previous successful run found."
+          echo "AAXYY will start with its default paper-trading state."
+          exit 0
+        fi
+
+        echo "Previous successful run: $PREVIOUS_RUN_ID"
+
+        ARTIFACT_ID=$(
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$PREVIOUS_RUN_ID/artifacts?per_page=100" |
+          jq -r \
+            '.artifacts[] | select(.name == "aaxyy-paper-trading-state" and .expired == false) | .id' |
+          head -n 1
+        )
+
+        if [ -z "$ARTIFACT_ID" ]; then
+          echo "No previous paper-trading-state artifact found."
+          echo "AAXYY will start with its existing default state."
+          exit 0
+        fi
+
+        echo "Previous state artifact: $ARTIFACT_ID"
+
+        curl -fsSL \
+          -H "Authorization: Bearer $GH_TOKEN" \
+          -H "Accept: application/vnd.github+json" \
+          "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" \
+          -o previous_state.zip
+
+        unzip -o previous_state.zip
+
+        echo "Restored paper-trading state:"
+        cat paper_trading_state.json
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Test with pytest
       run: |
         pytest
+
     - name: Run AAXYY paper trading
       run: |
         python main.py
+
     - name: Upload paper trade history
+      if: github.event_name == 'push'
       uses: actions/upload-artifact@v4
       with:
         name: aaxyy-paper-trade-history
         path: paper_trade_history.json
+        if-no-files-found: ignore
+        retention-days: 90
+
+    - name: Upload paper trading state
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v4
+      with:
+        name: aaxyy-paper-trading-state
+        path: paper_trading_state.json
         if-no-files-found: ignore
         retention-days: 90
