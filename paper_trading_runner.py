@@ -23,25 +23,31 @@ class PaperTradingRunner:
         self.last_opportunities = []
 
         self.history = history or PaperTradeHistory()
-        self.state = state or PaperTradingState()
-
-        saved_state = self.state.load()
-
-        saved_balance = saved_state["balance"]
-        saved_position = saved_state["position"]
+        self.state = state
 
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
             limit=50,
         )
 
+        if self.state is not None:
+            saved_state = self.state.load()
+            starting_balance = saved_state["balance"]
+        else:
+            saved_state = {
+                "balance": float(starting_balance),
+                "position": None,
+            }
+
         self.scanner = MarketScanner(self.provider)
 
         self.executor = PaperTradingExecutor(
-            starting_balance=saved_balance,
+            starting_balance=starting_balance,
         )
 
-        if saved_position is not None:
+        if saved_state["position"] is not None:
+            saved_position = saved_state["position"]
+
             self.executor.position = PaperPosition(
                 symbol=saved_position["symbol"],
                 side=saved_position["side"],
@@ -51,17 +57,11 @@ class PaperTradingRunner:
                 take_profit=saved_position.get("take_profit"),
             )
 
-        if symbols is None:
-            universe = BitgetMarketUniverse(
-                max_symbols=20,
-            )
-
-            self.symbols = universe.get_symbols()
-        else:
-            self.symbols = symbols
-
     def save_state(self):
         """Save the current paper-trading account state."""
+
+        if self.state is None:
+            return None
 
         position = None
 
