@@ -184,26 +184,26 @@ class PaperTradingExecutor:
         if side == "BUY":
             if stop_loss is not None and current_price <= stop_loss:
                 return self.close_position(
-                    current_price,
+                    stop_loss,
                     reason="STOP_LOSS",
                 )
 
             if take_profit is not None and current_price >= take_profit:
                 return self.close_position(
-                    current_price,
+                    take_profit,
                     reason="TAKE_PROFIT",
                 )
 
         elif side == "SELL":
             if stop_loss is not None and current_price >= stop_loss:
                 return self.close_position(
-                    current_price,
+                    stop_loss,
                     reason="STOP_LOSS",
                 )
 
             if take_profit is not None and current_price <= take_profit:
                 return self.close_position(
-                    current_price,
+                    take_profit,
                     reason="TAKE_PROFIT",
                 )
 
