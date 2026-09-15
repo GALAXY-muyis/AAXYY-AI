@@ -1,5 +1,6 @@
 from paper_trade_report import PaperTradeReport
 from paper_trading_runner import PaperTradingRunner
+from paper_trading_state import PaperTradingState
 
 
 print("AAXYY AI")
@@ -13,6 +14,7 @@ print("------------------------------")
 runner = PaperTradingRunner(
     symbols=None,
     starting_balance=1000,
+    state=PaperTradingState(),
 )
 
 result = runner.open_best_paper_trade()
