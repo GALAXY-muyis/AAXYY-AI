@@ -44,7 +44,14 @@ class PaperTradingRunner:
         self.executor = PaperTradingExecutor(
             starting_balance=starting_balance,
         )
+        if symbols is None:
+    universe = BitgetMarketUniverse(
+        max_symbols=20,
+    )
 
+    self.symbols = universe.get_symbols()
+   else:
+    self.symbols = symbols
         if saved_state["position"] is not None:
             saved_position = saved_state["position"]
 
