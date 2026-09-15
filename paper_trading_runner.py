@@ -4,7 +4,8 @@ from bitget_market_data_provider import BitgetMarketDataProvider
 from bitget_market_universe import BitgetMarketUniverse
 from market_scanner import MarketScanner
 from paper_trade_history import PaperTradeHistory
-from paper_trading_executor import PaperTradingExecutor
+from paper_trading_executor import PaperPosition, PaperTradingExecutor
+from paper_trading_state import PaperTradingState
 
 
 class PaperTradingRunner:
@@ -16,9 +17,18 @@ class PaperTradingRunner:
         starting_balance=1000,
         sleep_function=time.sleep,
         history=None,
+        state=None,
     ):
         self.sleep_function = sleep_function
         self.last_opportunities = []
+
+        self.history = history or PaperTradeHistory()
+        self.state = state or PaperTradingState()
+
+        saved_state = self.state.load()
+
+        saved_balance = saved_state["balance"]
+        saved_position = saved_state["position"]
 
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
@@ -28,10 +38,18 @@ class PaperTradingRunner:
         self.scanner = MarketScanner(self.provider)
 
         self.executor = PaperTradingExecutor(
-            starting_balance=starting_balance,
+            starting_balance=saved_balance,
         )
 
-        self.history = history or PaperTradeHistory()
+        if saved_position is not None:
+            self.executor.position = PaperPosition(
+                symbol=saved_position["symbol"],
+                side=saved_position["side"],
+                entry_price=saved_position["entry_price"],
+                quantity=saved_position["quantity"],
+                stop_loss=saved_position.get("stop_loss"),
+                take_profit=saved_position.get("take_profit"),
+            )
 
         if symbols is None:
             universe = BitgetMarketUniverse(
@@ -41,6 +59,26 @@ class PaperTradingRunner:
             self.symbols = universe.get_symbols()
         else:
             self.symbols = symbols
+
+    def save_state(self):
+        """Save the current paper-trading account state."""
+
+        position = None
+
+        if self.executor.position is not None:
+            position = {
+                "symbol": self.executor.position.symbol,
+                "side": self.executor.position.side,
+                "entry_price": self.executor.position.entry_price,
+                "quantity": self.executor.position.quantity,
+                "stop_loss": self.executor.position.stop_loss,
+                "take_profit": self.executor.position.take_profit,
+            }
+
+        return self.state.save(
+            balance=self.executor.balance,
+            position=position,
+        )
 
     def find_best_opportunity(self):
         """Scan markets and return the strongest valid opportunity."""
@@ -55,6 +93,12 @@ class PaperTradingRunner:
 
     def open_best_paper_trade(self):
         """Open the best valid opportunity as a paper trade."""
+
+        if self.executor.position is not None:
+            return {
+                "status": "NO_TRADE",
+                "reason": "POSITION_ALREADY_OPEN",
+            }
 
         opportunity = self.find_best_opportunity()
 
@@ -92,6 +136,8 @@ class PaperTradingRunner:
                     }
                 )
 
+            self.save_state()
+
             return {
                 "status": "NO_TRADE",
                 "reason": "NO_VALID_OPPORTUNITY",
@@ -108,6 +154,8 @@ class PaperTradingRunner:
             "STRONG BUY",
             "STRONG SELL",
         ):
+            self.save_state()
+
             return {
                 "status": "NO_TRADE",
                 "reason": opportunity["final_decision"],
@@ -156,6 +204,8 @@ class PaperTradingRunner:
             take_profit=opportunity["targets"]["take_profit"],
         )
 
+        self.save_state()
+
         return {
             "status": "PAPER_TRADE_OPENED",
             "trade": trade,
@@ -166,6 +216,8 @@ class PaperTradingRunner:
         """Check the open paper position against the latest market price."""
 
         if self.executor.position is None:
+            self.save_state()
+
             return {
                 "status": "NO_POSITION",
                 "reason": "NO_OPEN_POSITION",
@@ -181,11 +233,14 @@ class PaperTradingRunner:
 
         if exit_result is not None:
             self.history.append(exit_result)
+            self.save_state()
 
             return {
                 "status": "PAPER_TRADE_CLOSED",
                 "exit": exit_result,
             }
+
+        self.save_state()
 
         return {
             "status": "POSITION_OPEN",
@@ -210,6 +265,8 @@ class PaperTradingRunner:
             )
 
         if self.executor.position is None:
+            self.save_state()
+
             return {
                 "status": "NO_POSITION",
                 "reason": "NO_OPEN_POSITION",
@@ -225,6 +282,8 @@ class PaperTradingRunner:
 
             if check_number < max_checks - 1:
                 self.sleep_function(interval_seconds)
+
+        self.save_state()
 
         return {
             "status": "MONITORING_LIMIT_REACHED",
