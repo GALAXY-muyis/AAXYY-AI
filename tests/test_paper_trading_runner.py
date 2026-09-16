@@ -42,7 +42,30 @@ def test_runner_opens_best_paper_trade(monkeypatch, tmp_path):
     assert history.load() == []
 
 
-def test_runner_rejects_when_no_valid_opportunity(tmp_path):
+def test_runner_rejects_when_no_valid_opportunity(
+    monkeypatch,
+    tmp_path,
+):
+    history = PaperTradeHistory(
+        tmp_path / "paper_trade_history.json"
+    )
+
+    runner = PaperTradingRunner(
+        symbols=["BTC"],
+        starting_balance=1000,
+        history=history,
+    )
+
+    monkeypatch.setattr(
+        runner,
+        "find_best_opportunity",
+        lambda: None,
+    )
+
+    result = runner.open_best_paper_trade()
+
+    assert result["status"] == "NO_TRADE"
+    assert result["reason"] == "NO_VALID_OPPORTUNITY"
     history = PaperTradeHistory(
         tmp_path / "paper_trade_history.json"
     )
