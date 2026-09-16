@@ -66,23 +66,12 @@ def test_runner_rejects_when_no_valid_opportunity(
 
     assert result["status"] == "NO_TRADE"
     assert result["reason"] == "NO_VALID_OPPORTUNITY"
-    history = PaperTradeHistory(
-        tmp_path / "paper_trade_history.json"
-    )
-
-    runner = PaperTradingRunner(
-        symbols=["BTC"],
-        starting_balance=1000,
-        history=history,
-    )
-
-    result = runner.open_best_paper_trade()
-
-    assert result["status"] == "NO_TRADE"
-    assert result["reason"] == "NO_VALID_OPPORTUNITY"
 
 
-def test_runner_records_only_closed_trade(tmp_path):
+def test_runner_records_only_closed_trade(
+    monkeypatch,
+    tmp_path,
+):
     history = PaperTradeHistory(
         tmp_path / "paper_trade_history.json"
     )
@@ -105,8 +94,6 @@ def test_runner_records_only_closed_trade(tmp_path):
         },
         "scan_score": 100,
     }
-
-    monkeypatch = __import__("pytest").MonkeyPatch()
 
     monkeypatch.setattr(
         runner,
@@ -132,5 +119,3 @@ def test_runner_records_only_closed_trade(tmp_path):
     assert len(saved_trades) == 1
     assert saved_trades[0]["symbol"] == "BTCUSDT"
     assert saved_trades[0]["reason"] == "TAKE_PROFIT"
-
-    monkeypatch.undo()
