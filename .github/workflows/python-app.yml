@@ -34,15 +34,15 @@ jobs:
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Restore previous paper trading state
-      if: github.event_name == 'push'
+    - name: Restore previous paper trading data
+      if: github.event_name == 'push' || github.event_name == 'schedule'
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -e
 
-        echo "Looking for previous AAXYY paper-trading state..."
+        echo "Looking for previous AAXYY paper-trading data..."
 
         RUN_IDS=$(
           curl -fsSL \
@@ -53,45 +53,88 @@ jobs:
             '.workflow_runs[] | select(.id|tostring != $current) | .id'
         )
 
-        FOUND_ARTIFACT=false
+        FOUND_STATE=false
+        FOUND_HISTORY=false
 
         for RUN_ID in $RUN_IDS; do
           echo "Checking successful run: $RUN_ID"
 
-          ARTIFACT_ID=$(
+          ARTIFACTS=$(
             curl -fsSL \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?per_page=100" |
-            jq -r \
-              '.artifacts[] | select(.name == "aaxyy-paper-trading-state" and .expired == false) | .id' |
-            head -n 1
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?per_page=100"
           )
 
-          if [ -n "$ARTIFACT_ID" ]; then
-            echo "Found paper-trading-state artifact."
-            echo "Source run: $RUN_ID"
-            echo "Artifact ID: $ARTIFACT_ID"
+          if [ "$FOUND_STATE" = false ]; then
+            STATE_ARTIFACT_ID=$(
+              echo "$ARTIFACTS" |
+              jq -r \
+                '.artifacts[] | select(.name == "aaxyy-paper-trading-state" and .expired == false) | .id' |
+              head -n 1
+            )
 
-            curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" \
-              -o previous_state.zip
+            if [ -n "$STATE_ARTIFACT_ID" ]; then
+              echo "Found paper-trading-state artifact."
+              echo "Source run: $RUN_ID"
+              echo "Artifact ID: $STATE_ARTIFACT_ID"
 
-            unzip -o previous_state.zip
+              curl -fsSL \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$STATE_ARTIFACT_ID/zip" \
+                -o previous_state.zip
 
-            echo "Restored paper-trading state:"
-            cat paper_trading_state.json
+              unzip -o previous_state.zip
 
-            FOUND_ARTIFACT=true
+              echo "Restored paper-trading state:"
+              cat paper_trading_state.json
+
+              FOUND_STATE=true
+            fi
+          fi
+
+          if [ "$FOUND_HISTORY" = false ]; then
+            HISTORY_ARTIFACT_ID=$(
+              echo "$ARTIFACTS" |
+              jq -r \
+                '.artifacts[] | select(.name == "aaxyy-paper-trade-history" and .expired == false) | .id' |
+              head -n 1
+            )
+
+            if [ -n "$HISTORY_ARTIFACT_ID" ]; then
+              echo "Found paper-trade-history artifact."
+              echo "Source run: $RUN_ID"
+              echo "Artifact ID: $HISTORY_ARTIFACT_ID"
+
+              curl -fsSL \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$HISTORY_ARTIFACT_ID/zip" \
+                -o previous_history.zip
+
+              unzip -o previous_history.zip
+
+              echo "Restored paper-trade history:"
+              cat paper_trade_history.json
+
+              FOUND_HISTORY=true
+            fi
+          fi
+
+          if [ "$FOUND_STATE" = true ] && [ "$FOUND_HISTORY" = true ]; then
             break
           fi
         done
 
-        if [ "$FOUND_ARTIFACT" = false ]; then
+        if [ "$FOUND_STATE" = false ]; then
           echo "No previous paper-trading-state artifact found."
           echo "AAXYY will start with its existing default state."
+        fi
+
+        if [ "$FOUND_HISTORY" = false ]; then
+          echo "No previous paper-trade-history artifact found."
+          echo "AAXYY will start with its existing history file."
         fi
 
     - name: Lint with flake8
@@ -110,7 +153,7 @@ jobs:
         python main.py
 
     - name: Upload paper trade history
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'schedule'
       uses: actions/upload-artifact@v4
       with:
         name: aaxyy-paper-trade-history
@@ -119,7 +162,7 @@ jobs:
         retention-days: 90
 
     - name: Upload paper trading state
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'schedule'
       uses: actions/upload-artifact@v4
       with:
         name: aaxyy-paper-trading-state
