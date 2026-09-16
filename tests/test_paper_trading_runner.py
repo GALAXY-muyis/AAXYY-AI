@@ -3,9 +3,7 @@ from paper_trade_history import PaperTradeHistory
 
 
 def test_runner_opens_best_paper_trade(monkeypatch, tmp_path):
-    history = PaperTradeHistory(
-        tmp_path / "paper_trade_history.json"
-    )
+    history = PaperTradeHistory(tmp_path / "paper_trade_history.json")
 
     runner = PaperTradingRunner(
         symbols=["BTC"],
@@ -38,17 +36,11 @@ def test_runner_opens_best_paper_trade(monkeypatch, tmp_path):
     assert result["trade"]["symbol"] == "BTCUSDT"
     assert result["trade"]["side"] == "BUY"
     assert runner.executor.position is not None
-
     assert history.load() == []
 
 
-def test_runner_rejects_when_no_valid_opportunity(
-    monkeypatch,
-    tmp_path,
-):
-    history = PaperTradeHistory(
-        tmp_path / "paper_trade_history.json"
-    )
+def test_runner_rejects_when_no_valid_opportunity(monkeypatch, tmp_path):
+    history = PaperTradeHistory(tmp_path / "paper_trade_history.json")
 
     runner = PaperTradingRunner(
         symbols=["BTC"],
@@ -68,13 +60,8 @@ def test_runner_rejects_when_no_valid_opportunity(
     assert result["reason"] == "NO_VALID_OPPORTUNITY"
 
 
-def test_runner_records_only_closed_trade(
-    monkeypatch,
-    tmp_path,
-):
-    history = PaperTradeHistory(
-        tmp_path / "paper_trade_history.json"
-    )
+def test_runner_records_only_closed_trade(monkeypatch, tmp_path):
+    history = PaperTradeHistory(tmp_path / "paper_trade_history.json")
 
     runner = PaperTradingRunner(
         symbols=["BTC"],
