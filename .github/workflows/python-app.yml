@@ -80,16 +80,12 @@ jobs:
                 -H "Accept: application/vnd.github+json" \
                 "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$STATE_ARTIFACT_ID/zip" \
                 -o previous_state.zip; then
-
                 unzip -o previous_state.zip
-
                 echo "Restored paper-trading state:"
                 cat paper_trading_state.json
-
                 FOUND_STATE=true
               else
                 echo "Could not download this state artifact."
-                echo "Trying the next successful run..."
               fi
             fi
           fi
@@ -112,16 +108,12 @@ jobs:
                 -H "Accept: application/vnd.github+json" \
                 "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$HISTORY_ARTIFACT_ID/zip" \
                 -o previous_history.zip; then
-
                 unzip -o previous_history.zip
-
                 echo "Restored paper-trade history:"
                 cat paper_trade_history.json
-
                 FOUND_HISTORY=true
               else
                 echo "Could not download this history artifact."
-                echo "Trying the next successful run..."
               fi
             fi
           fi
@@ -133,55 +125,17 @@ jobs:
 
         if [ "$FOUND_STATE" = false ]; then
           echo "No downloadable previous paper-trading-state artifact found."
-          echo "AAXYY will start with its existing default state."
         fi
 
         if [ "$FOUND_HISTORY" = false ]; then
           echo "No downloadable previous paper-trade-history artifact found."
-          echo "AAXYY will start with its existing history file."
         fi
 
     - name: Clean synthetic paper trade history
       shell: bash
       run: |
         if [ -f paper_trade_history.json ]; then
-          python - <<'PY'
-        import json
-
-        path = "paper_trade_history.json"
-
-        with open(path, "r", encoding="utf-8") as file:
-            trades = json.load(file)
-
-        cleaned_trades = []
-
-        for trade in trades:
-            is_synthetic_btc_trade = (
-                trade.get("symbol") == "BTCUSDT"
-                and trade.get("side") == "BUY"
-                and trade.get("entry_price") == 100.0
-                and trade.get("exit_price") == 110.0
-                and trade.get("quantity") == 1.0
-                and trade.get("pnl") == 10.0
-                and trade.get("reason") == "TAKE_PROFIT"
-                and trade.get("balance_after") == 1010.0
-            )
-
-            if not is_synthetic_btc_trade:
-                cleaned_trades.append(trade)
-
-        removed = len(trades) - len(cleaned_trades)
-
-        with open(path, "w", encoding="utf-8") as file:
-            json.dump(
-                cleaned_trades,
-                file,
-                indent=2,
-            )
-
-        print(f"Synthetic BTC trades removed: {removed}")
-        print(f"Remaining history records: {len(cleaned_trades)}")
-        PY
+          python -c 'import json; p="paper_trade_history.json"; trades=json.load(open(p, encoding="utf-8")); cleaned=[t for t in trades if not (t.get("symbol")=="BTCUSDT" and t.get("side")=="BUY" and t.get("entry_price")==100.0 and t.get("exit_price")==110.0 and t.get("quantity")==1.0 and t.get("pnl")==10.0 and t.get("reason")=="TAKE_PROFIT" and t.get("balance_after")==1010.0)]; print(f"Synthetic BTC trades removed: {len(trades)-len(cleaned)}"); print(f"Remaining history records: {len(cleaned)}"); json.dump(cleaned, open(p, "w", encoding="utf-8"), indent=2)'
         else
           echo "No paper_trade_history.json found. Nothing to clean."
         fi
@@ -204,24 +158,9 @@ jobs:
 
         if [ -f paper_trade_history.json ]; then
           cat paper_trade_history.json
-
-          python - <<'PY'
-        import json
-
-        with open("paper_trade_history.json", "r", encoding="utf-8") as file:
-            trades = json.load(file)
-
-        print(f"History record count before main.py: {len(trades)}")
-
-        for index, trade in enumerate(trades, start=1):
-            print(
-                f"{index}: "
-                f"{trade.get('symbol')} "
-                f"{trade.get('side')} "
-                f"PnL={trade.get('pnl')} "
-                f"Reason={trade.get('reason')}"
-            )
-        PY
+          echo
+          echo "History record count before main.py:"
+          python -c 'import json; print(len(json.load(open("paper_trade_history.json", encoding="utf-8"))))'
         else
           echo "paper_trade_history.json DOES NOT EXIST before main.py"
         fi
@@ -251,15 +190,3 @@ jobs:
         path: paper_trading_state.json
         if-no-files-found: ignore
         retention-days: 90
-
-Commit message
-
-fix: remove synthetic paper trade history
-
-Then wait for GREEN.
-
-After it finishes, open "build" and send me the output from:
-
-"AAXYY CLEAN HISTORY DIAGNOSTIC"
-
-I expect the synthetic BTC records to be gone. We will verify that before making any further change.
