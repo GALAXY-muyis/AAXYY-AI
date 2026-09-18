@@ -141,6 +141,51 @@ jobs:
           echo "AAXYY will start with its existing history file."
         fi
 
+    - name: Clean synthetic paper trade history
+      shell: bash
+      run: |
+        if [ -f paper_trade_history.json ]; then
+          python - <<'PY'
+        import json
+
+        path = "paper_trade_history.json"
+
+        with open(path, "r", encoding="utf-8") as file:
+            trades = json.load(file)
+
+        cleaned_trades = []
+
+        for trade in trades:
+            is_synthetic_btc_trade = (
+                trade.get("symbol") == "BTCUSDT"
+                and trade.get("side") == "BUY"
+                and trade.get("entry_price") == 100.0
+                and trade.get("exit_price") == 110.0
+                and trade.get("quantity") == 1.0
+                and trade.get("pnl") == 10.0
+                and trade.get("reason") == "TAKE_PROFIT"
+                and trade.get("balance_after") == 1010.0
+            )
+
+            if not is_synthetic_btc_trade:
+                cleaned_trades.append(trade)
+
+        removed = len(trades) - len(cleaned_trades)
+
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(
+                cleaned_trades,
+                file,
+                indent=2,
+            )
+
+        print(f"Synthetic BTC trades removed: {removed}")
+        print(f"Remaining history records: {len(cleaned_trades)}")
+        PY
+        else
+          echo "No paper_trade_history.json found. Nothing to clean."
+        fi
+
     - name: Lint with flake8
       run: |
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -150,18 +195,15 @@ jobs:
       run: |
         pytest
 
-    - name: DIAGNOSTIC - inspect history before main
+    - name: DIAGNOSTIC - inspect cleaned history before main
       shell: bash
       run: |
         echo "========================================"
-        echo "AAXYY HISTORY DIAGNOSTIC"
+        echo "AAXYY CLEAN HISTORY DIAGNOSTIC"
         echo "========================================"
 
         if [ -f paper_trade_history.json ]; then
-          echo "paper_trade_history.json EXISTS before main.py"
-          echo "----------------------------------------"
           cat paper_trade_history.json
-          echo "----------------------------------------"
 
           python - <<'PY'
         import json
@@ -185,7 +227,7 @@ jobs:
         fi
 
         echo "========================================"
-        echo "END HISTORY DIAGNOSTIC"
+        echo "END CLEAN HISTORY DIAGNOSTIC"
         echo "========================================"
 
     - name: Run AAXYY paper trading
@@ -209,3 +251,15 @@ jobs:
         path: paper_trading_state.json
         if-no-files-found: ignore
         retention-days: 90
+
+Commit message
+
+fix: remove synthetic paper trade history
+
+Then wait for GREEN.
+
+After it finishes, open "build" and send me the output from:
+
+"AAXYY CLEAN HISTORY DIAGNOSTIC"
+
+I expect the synthetic BTC records to be gone. We will verify that before making any further change.
