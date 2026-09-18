@@ -75,18 +75,22 @@ jobs:
               echo "Source run: $RUN_ID"
               echo "Artifact ID: $STATE_ARTIFACT_ID"
 
-              curl -fsSL \
+              if curl -fsSL \
                 -H "Authorization: Bearer $GH_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
                 "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$STATE_ARTIFACT_ID/zip" \
-                -o previous_state.zip
+                -o previous_state.zip; then
 
-              unzip -o previous_state.zip
+                unzip -o previous_state.zip
 
-              echo "Restored paper-trading state:"
-              cat paper_trading_state.json
+                echo "Restored paper-trading state:"
+                cat paper_trading_state.json
 
-              FOUND_STATE=true
+                FOUND_STATE=true
+              else
+                echo "Could not download this state artifact."
+                echo "Trying the next successful run..."
+              fi
             fi
           fi
 
@@ -103,18 +107,22 @@ jobs:
               echo "Source run: $RUN_ID"
               echo "Artifact ID: $HISTORY_ARTIFACT_ID"
 
-              curl -fsSL \
+              if curl -fsSL \
                 -H "Authorization: Bearer $GH_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
-                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts/$HISTORY_ARTIFACT_ID/zip" \
-                -o previous_history.zip
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$HISTORY_ARTIFACT_ID/zip" \
+                -o previous_history.zip; then
 
-              unzip -o previous_history.zip
+                unzip -o previous_history.zip
 
-              echo "Restored paper-trade history:"
-              cat paper_trade_history.json
+                echo "Restored paper-trade history:"
+                cat paper_trade_history.json
 
-              FOUND_HISTORY=true
+                FOUND_HISTORY=true
+              else
+                echo "Could not download this history artifact."
+                echo "Trying the next successful run..."
+              fi
             fi
           fi
 
@@ -124,12 +132,12 @@ jobs:
         done
 
         if [ "$FOUND_STATE" = false ]; then
-          echo "No previous paper-trading-state artifact found."
+          echo "No downloadable previous paper-trading-state artifact found."
           echo "AAXYY will start with its existing default state."
         fi
 
         if [ "$FOUND_HISTORY" = false ]; then
-          echo "No previous paper-trade-history artifact found."
+          echo "No downloadable previous paper-trade-history artifact found."
           echo "AAXYY will start with its existing history file."
         fi
 
