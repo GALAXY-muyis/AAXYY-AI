@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: Python application
 
 on:
@@ -17,7 +14,6 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -110,7 +106,7 @@ jobs:
               curl -fsSL \
                 -H "Authorization: Bearer $GH_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
-                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$HISTORY_ARTIFACT_ID/zip" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts/$HISTORY_ARTIFACT_ID/zip" \
                 -o previous_history.zip
 
               unzip -o previous_history.zip
@@ -139,14 +135,50 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Test with pytest
       run: |
         pytest
+
+    - name: DIAGNOSTIC - inspect history before main
+      shell: bash
+      run: |
+        echo "========================================"
+        echo "AAXYY HISTORY DIAGNOSTIC"
+        echo "========================================"
+
+        if [ -f paper_trade_history.json ]; then
+          echo "paper_trade_history.json EXISTS before main.py"
+          echo "----------------------------------------"
+          cat paper_trade_history.json
+          echo "----------------------------------------"
+
+          python - <<'PY'
+        import json
+
+        with open("paper_trade_history.json", "r", encoding="utf-8") as file:
+            trades = json.load(file)
+
+        print(f"History record count before main.py: {len(trades)}")
+
+        for index, trade in enumerate(trades, start=1):
+            print(
+                f"{index}: "
+                f"{trade.get('symbol')} "
+                f"{trade.get('side')} "
+                f"PnL={trade.get('pnl')} "
+                f"Reason={trade.get('reason')}"
+            )
+        PY
+        else
+          echo "paper_trade_history.json DOES NOT EXIST before main.py"
+        fi
+
+        echo "========================================"
+        echo "END HISTORY DIAGNOSTIC"
+        echo "========================================"
 
     - name: Run AAXYY paper trading
       run: |
