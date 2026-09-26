@@ -11,6 +11,8 @@ class Transfer:
     sender: str
     receiver: str
     timestamp: Optional[str] = None
+    sender_type: Optional[str] = None
+    receiver_type: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -72,11 +74,35 @@ def classify_transfer(
             reason="Transfer is below the configured whale threshold.",
         )
 
+    sender_type = (transfer.sender_type or "").lower()
+    receiver_type = (transfer.receiver_type or "").lower()
+
+    if sender_type == "exchange" and receiver_type == "wallet":
+        return WhaleAssessment(
+            classification="WHALE_ACCUMULATION",
+            confidence=85,
+            reason=(
+                f"Large {transfer.token} movement from an exchange "
+                f"to a wallet: ${transfer.amount_usd:,.2f}."
+            ),
+        )
+
+    if sender_type == "wallet" and receiver_type == "exchange":
+        return WhaleAssessment(
+            classification="WHALE_DISTRIBUTION",
+            confidence=85,
+            reason=(
+                f"Large {transfer.token} movement from a wallet "
+                f"to an exchange: ${transfer.amount_usd:,.2f}."
+            ),
+        )
+
     return WhaleAssessment(
         classification="WHALE_TRANSFER",
         confidence=75,
         reason=(
             f"Large {transfer.token} transfer detected: "
-            f"${transfer.amount_usd:,.2f}."
+            f"${transfer.amount_usd:,.2f}, but transfer direction "
+            f"cannot yet be classified."
         ),
     )
