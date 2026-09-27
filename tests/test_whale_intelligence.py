@@ -80,7 +80,7 @@ def test_same_sender_and_receiver_is_normal():
     assert result.classification == "NORMAL_TRANSFER"
 
 
-def test_exchange_to_wallet_is_whale_accumulation():
+def test_exchange_to_wallet_is_possible_accumulation():
     transfer = Transfer(
         token="ETH",
         amount_usd=500_000,
@@ -92,11 +92,11 @@ def test_exchange_to_wallet_is_whale_accumulation():
 
     result = classify_transfer(transfer)
 
-    assert result.classification == "WHALE_ACCUMULATION"
-    assert result.confidence == 85
+    assert result.classification == "POSSIBLE_ACCUMULATION"
+    assert result.confidence == 65
 
 
-def test_wallet_to_exchange_is_whale_distribution():
+def test_wallet_to_exchange_is_possible_distribution():
     transfer = Transfer(
         token="ETH",
         amount_usd=500_000,
@@ -108,8 +108,8 @@ def test_wallet_to_exchange_is_whale_distribution():
 
     result = classify_transfer(transfer)
 
-    assert result.classification == "WHALE_DISTRIBUTION"
-    assert result.confidence == 85
+    assert result.classification == "POSSIBLE_DISTRIBUTION"
+    assert result.confidence == 65
 
 
 def test_large_transfer_with_unknown_direction_is_whale_transfer():
