@@ -33,8 +33,8 @@ def classify_transfer(
 
     Possible classifications:
     - WHALE_TRANSFER
-    - WHALE_ACCUMULATION
-    - WHALE_DISTRIBUTION
+    - POSSIBLE_ACCUMULATION
+    - POSSIBLE_DISTRIBUTION
     - NORMAL_TRANSFER
     - INVALID_DATA
     """
@@ -79,21 +79,25 @@ def classify_transfer(
 
     if sender_type == "exchange" and receiver_type == "wallet":
         return WhaleAssessment(
-            classification="WHALE_ACCUMULATION",
-            confidence=85,
+            classification="POSSIBLE_ACCUMULATION",
+            confidence=65,
             reason=(
                 f"Large {transfer.token} movement from an exchange "
-                f"to a wallet: ${transfer.amount_usd:,.2f}."
+                f"to a wallet: ${transfer.amount_usd:,.2f}. "
+                "This may indicate accumulation, but the transfer "
+                "alone does not prove a purchase."
             ),
         )
 
     if sender_type == "wallet" and receiver_type == "exchange":
         return WhaleAssessment(
-            classification="WHALE_DISTRIBUTION",
-            confidence=85,
+            classification="POSSIBLE_DISTRIBUTION",
+            confidence=65,
             reason=(
                 f"Large {transfer.token} movement from a wallet "
-                f"to an exchange: ${transfer.amount_usd:,.2f}."
+                f"to an exchange: ${transfer.amount_usd:,.2f}. "
+                "This may indicate distribution, but the transfer "
+                "alone does not prove a sale."
             ),
         )
 
@@ -102,7 +106,7 @@ def classify_transfer(
         confidence=75,
         reason=(
             f"Large {transfer.token} transfer detected: "
-            f"${transfer.amount_usd:,.2f}, but transfer direction "
-            f"cannot yet be classified."
+            f"${transfer.amount_usd:,.2f}, but the transfer direction "
+            "cannot yet be interpreted."
         ),
-    )
+        )
