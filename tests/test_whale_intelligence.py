@@ -78,3 +78,49 @@ def test_same_sender_and_receiver_is_normal():
     result = classify_transfer(transfer)
 
     assert result.classification == "NORMAL_TRANSFER"
+
+
+def test_exchange_to_wallet_is_whale_accumulation():
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xEXCHANGE",
+        receiver="0xWALLET",
+        sender_type="exchange",
+        receiver_type="wallet",
+    )
+
+    result = classify_transfer(transfer)
+
+    assert result.classification == "WHALE_ACCUMULATION"
+    assert result.confidence == 85
+
+
+def test_wallet_to_exchange_is_whale_distribution():
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xWALLET",
+        receiver="0xEXCHANGE",
+        sender_type="wallet",
+        receiver_type="exchange",
+    )
+
+    result = classify_transfer(transfer)
+
+    assert result.classification == "WHALE_DISTRIBUTION"
+    assert result.confidence == 85
+
+
+def test_large_transfer_with_unknown_direction_is_whale_transfer():
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xAAA",
+        receiver="0xBBB",
+    )
+
+    result = classify_transfer(transfer)
+
+    assert result.classification == "WHALE_TRANSFER"
+    assert result.confidence == 75
