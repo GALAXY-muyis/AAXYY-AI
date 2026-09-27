@@ -1,63 +1,64 @@
+"""
+AAXYY AI - Whale Intelligence
+
+Classifies large blockchain transfers while keeping uncertainty explicit.
+
+A transfer between an exchange and a wallet may indicate accumulation
+or distribution, but the transfer alone does not prove a buy or sell.
+"""
+
 from dataclasses import dataclass
-from typing import Optional
+
+from address_intelligence import classify_address_role
 
 
-@dataclass(frozen=True)
+@dataclass
 class Transfer:
-    """A normalized blockchain asset transfer."""
-
     token: str
     amount_usd: float
     sender: str
     receiver: str
-    timestamp: Optional[str] = None
-    sender_type: Optional[str] = None
-    receiver_type: Optional[str] = None
+    timestamp: str = ""
+    sender_type: str = "unknown"
+    receiver_type: str = "unknown"
 
 
-@dataclass(frozen=True)
+@dataclass
 class WhaleAssessment:
-    """Explainable assessment of a large wallet movement."""
-
     classification: str
     confidence: int
     reason: str
 
 
-def classify_transfer(
-    transfer: Transfer,
-    whale_threshold_usd: float = 100_000,
-) -> WhaleAssessment:
-    """
-    Classify a large transfer without making a trading decision.
+def classify_transfer(transfer: Transfer) -> WhaleAssessment:
+    """Classify a blockchain transfer for whale-intelligence purposes."""
 
-    Possible classifications:
-    - WHALE_TRANSFER
-    - POSSIBLE_ACCUMULATION
-    - POSSIBLE_DISTRIBUTION
-    - NORMAL_TRANSFER
-    - INVALID_DATA
-    """
-
-    if transfer.amount_usd < 0:
+    if not isinstance(transfer, Transfer):
         return WhaleAssessment(
             classification="INVALID_DATA",
-            confidence=100,
-            reason="Transfer value cannot be negative.",
+            confidence=0,
+            reason="Transfer data is invalid.",
         )
 
     if not transfer.token:
         return WhaleAssessment(
             classification="INVALID_DATA",
-            confidence=100,
-            reason="Token is required.",
+            confidence=0,
+            reason="Token is missing.",
+        )
+
+    if transfer.amount_usd < 0:
+        return WhaleAssessment(
+            classification="INVALID_DATA",
+            confidence=0,
+            reason="Transfer amount cannot be negative.",
         )
 
     if not transfer.sender or not transfer.receiver:
         return WhaleAssessment(
             classification="INVALID_DATA",
-            confidence=100,
-            reason="Sender and receiver are required.",
+            confidence=0,
+            reason="Sender or receiver address is missing.",
         )
 
     if transfer.sender == transfer.receiver:
@@ -67,37 +68,33 @@ def classify_transfer(
             reason="Sender and receiver are the same address.",
         )
 
-    if transfer.amount_usd < whale_threshold_usd:
+    if transfer.amount_usd < 100_000:
         return WhaleAssessment(
             classification="NORMAL_TRANSFER",
-            confidence=100,
-            reason="Transfer is below the configured whale threshold.",
+            confidence=90,
+            reason="Transfer is below the whale threshold.",
         )
 
-    sender_type = (transfer.sender_type or "").lower()
-    receiver_type = (transfer.receiver_type or "").lower()
+    sender_role = classify_address_role(transfer.sender_type)
+    receiver_role = classify_address_role(transfer.receiver_type)
 
-    if sender_type == "exchange" and receiver_type == "wallet":
+    if sender_role == "exchange" and receiver_role == "wallet":
         return WhaleAssessment(
             classification="POSSIBLE_ACCUMULATION",
             confidence=65,
             reason=(
-                f"Large {transfer.token} movement from an exchange "
-                f"to a wallet: ${transfer.amount_usd:,.2f}. "
-                "This may indicate accumulation, but the transfer "
-                "alone does not prove a purchase."
+                "Large exchange-to-wallet transfer may indicate accumulation, "
+                "but the transfer alone does not prove a purchase."
             ),
         )
 
-    if sender_type == "wallet" and receiver_type == "exchange":
+    if sender_role == "wallet" and receiver_role == "exchange":
         return WhaleAssessment(
             classification="POSSIBLE_DISTRIBUTION",
             confidence=65,
             reason=(
-                f"Large {transfer.token} movement from a wallet "
-                f"to an exchange: ${transfer.amount_usd:,.2f}. "
-                "This may indicate distribution, but the transfer "
-                "alone does not prove a sale."
+                "Large wallet-to-exchange transfer may indicate distribution, "
+                "but the transfer alone does not prove a sale."
             ),
         )
 
@@ -105,8 +102,7 @@ def classify_transfer(
         classification="WHALE_TRANSFER",
         confidence=75,
         reason=(
-            f"Large {transfer.token} transfer detected: "
-            f"${transfer.amount_usd:,.2f}, but the transfer direction "
-            "cannot yet be interpreted."
+            "Large transfer detected, but the address roles do not provide "
+            "enough evidence to classify accumulation or distribution."
         ),
-        )
+    )
