@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from address_intelligence import classify_address_role
 from address_registry import AddressRegistry
+from chain_intelligence import classify_chain
 
 
 @dataclass
@@ -22,6 +23,7 @@ class Transfer:
     timestamp: str = ""
     sender_type: str = "unknown"
     receiver_type: str = "unknown"
+    chain: str = "unknown"
 
 
 @dataclass
@@ -87,17 +89,29 @@ def classify_transfer(
     sender_attribution_confidence = "UNKNOWN"
     receiver_attribution_confidence = "UNKNOWN"
 
-    if address_registry is not None:
-        registered_sender_role = address_registry.get_role(transfer.sender)
+    chain = classify_chain(transfer.chain)
+
+    if address_registry is not None and chain != "unknown":
+        registered_sender_role = address_registry.get_role(
+            transfer.sender,
+            chain,
+        )
         registered_receiver_role = address_registry.get_role(
-            transfer.receiver
+            transfer.receiver,
+            chain,
         )
 
         sender_attribution_confidence = (
-            address_registry.get_confidence(transfer.sender)
+            address_registry.get_confidence(
+                transfer.sender,
+                chain,
+            )
         )
         receiver_attribution_confidence = (
-            address_registry.get_confidence(transfer.receiver)
+            address_registry.get_confidence(
+                transfer.receiver,
+                chain,
+            )
         )
 
         if registered_sender_role != "unknown":
@@ -139,4 +153,4 @@ def classify_transfer(
         ),
         sender_attribution_confidence=sender_attribution_confidence,
         receiver_attribution_confidence=receiver_attribution_confidence,
-    )
+        )
