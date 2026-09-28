@@ -29,6 +29,8 @@ class WhaleAssessment:
     classification: str
     confidence: int
     reason: str
+    sender_attribution_confidence: str = "UNKNOWN"
+    receiver_attribution_confidence: str = "UNKNOWN"
 
 
 def classify_transfer(
@@ -82,10 +84,20 @@ def classify_transfer(
     sender_role = classify_address_role(transfer.sender_type)
     receiver_role = classify_address_role(transfer.receiver_type)
 
+    sender_attribution_confidence = "UNKNOWN"
+    receiver_attribution_confidence = "UNKNOWN"
+
     if address_registry is not None:
         registered_sender_role = address_registry.get_role(transfer.sender)
         registered_receiver_role = address_registry.get_role(
             transfer.receiver
+        )
+
+        sender_attribution_confidence = (
+            address_registry.get_confidence(transfer.sender)
+        )
+        receiver_attribution_confidence = (
+            address_registry.get_confidence(transfer.receiver)
         )
 
         if registered_sender_role != "unknown":
@@ -102,6 +114,8 @@ def classify_transfer(
                 "Large exchange-to-wallet transfer may indicate accumulation, "
                 "but the transfer alone does not prove a purchase."
             ),
+            sender_attribution_confidence=sender_attribution_confidence,
+            receiver_attribution_confidence=receiver_attribution_confidence,
         )
 
     if sender_role == "wallet" and receiver_role == "exchange":
@@ -112,6 +126,8 @@ def classify_transfer(
                 "Large wallet-to-exchange transfer may indicate distribution, "
                 "but the transfer alone does not prove a sale."
             ),
+            sender_attribution_confidence=sender_attribution_confidence,
+            receiver_attribution_confidence=receiver_attribution_confidence,
         )
 
     return WhaleAssessment(
@@ -121,4 +137,6 @@ def classify_transfer(
             "Large transfer detected, but the address roles do not provide "
             "enough evidence to classify accumulation or distribution."
         ),
+        sender_attribution_confidence=sender_attribution_confidence,
+        receiver_attribution_confidence=receiver_attribution_confidence,
     )
