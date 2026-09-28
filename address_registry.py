@@ -1,12 +1,14 @@
 """
 AAXYY AI - Address Registry
 
-Stores known blockchain addresses and their identified roles.
+Stores known blockchain addresses, their identified roles,
+and the confidence of those identifications.
 
 This module provides address intelligence only.
 It does not make trading decisions.
 """
 
+from address_attribution import create_attribution
 from address_intelligence import classify_address_role
 
 
@@ -16,30 +18,71 @@ class AddressRegistry:
     def __init__(self):
         self._addresses = {}
 
-    def add_address(self, address, role):
-        """Add a known address with a validated role."""
+    def add_address(
+        self,
+        address,
+        role,
+        confidence="UNKNOWN",
+        source="",
+    ):
+        """Add a validated address attribution."""
 
         if not isinstance(address, str) or not address.strip():
             return False
 
-        normalized_address = address.strip()
         normalized_role = classify_address_role(role)
 
         if normalized_role == "unknown":
             return False
 
-        self._addresses[normalized_address] = normalized_role
+        attribution = create_attribution(
+            address=address,
+            role=normalized_role,
+            confidence=confidence,
+            source=source,
+        )
+
+        if attribution is None:
+            return False
+
+        self._addresses[attribution.address] = attribution
         return True
 
     def get_role(self, address):
         """Return the known role for an address."""
 
-        if not isinstance(address, str):
+        attribution = self._addresses.get(
+            address.strip() if isinstance(address, str) else ""
+        )
+
+        if attribution is None:
             return "unknown"
 
-        normalized_address = address.strip()
+        return attribution.role
 
-        return self._addresses.get(normalized_address, "unknown")
+    def get_confidence(self, address):
+        """Return attribution confidence for an address."""
+
+        attribution = self._addresses.get(
+            address.strip() if isinstance(address, str) else ""
+        )
+
+        if attribution is None:
+            return "UNKNOWN"
+
+        return attribution.confidence
+
+    def get_source(self, address):
+        """Return the attribution source for an address."""
+
+        attribution = self._addresses.get(
+            address.strip() if isinstance(address, str) else ""
+        )
+
+        if attribution is None:
+            return ""
+
+        return attribution.source
 
     def has_address(self, address):
         """Return True when the address exists in the registry."""
