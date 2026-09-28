@@ -1,15 +1,25 @@
 from whale_event_intelligence import analyze_whale_event
-from whale_intelligence import WhaleAssessment
+from whale_intelligence import Transfer, classify_transfer
 
 
-def make_assessment(classification, amount_usd):
-    assessment = WhaleAssessment(
-        classification=classification,
-        confidence=65,
-        reason="Test assessment.",
+def make_assessment(
+    classification,
+    amount_usd,
+):
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=amount_usd,
+        sender="0xSENDER",
+        receiver="0xRECEIVER",
+        sender_type="exchange"
+        if classification == "POSSIBLE_ACCUMULATION"
+        else "wallet",
+        receiver_type="wallet"
+        if classification == "POSSIBLE_ACCUMULATION"
+        else "exchange",
     )
-    assessment.amount_usd = amount_usd
-    return assessment
+
+    return classify_transfer(transfer)
 
 
 def test_accumulation_event():
@@ -57,6 +67,8 @@ def test_mixed_whale_activity():
     assert result.classification == "MIXED_WHALE_ACTIVITY"
     assert result.transfer_count == 2
     assert result.confidence == 60
+    assert result.accumulation_value_usd == 500_000
+    assert result.distribution_value_usd == 500_000
     assert result.total_value_usd == 1_000_000
 
 
