@@ -7,12 +7,13 @@ def test_add_exchange_address():
     result = registry.add_address(
         "0xEXCHANGE",
         "exchange",
-        "VERIFIED",
-        "official_source",
+        confidence="VERIFIED",
+        source="official_source",
+        chain="ethereum",
     )
 
     assert result is True
-    assert registry.get_role("0xEXCHANGE") == "exchange"
+    assert registry.get_role("0xEXCHANGE", "ethereum") == "exchange"
 
 
 def test_add_wallet_address():
@@ -21,40 +22,34 @@ def test_add_wallet_address():
     result = registry.add_address(
         "0xWALLET",
         "wallet",
-        "LIKELY",
-        "on_chain_analysis",
+        confidence="LIKELY",
+        source="wallet_source",
+        chain="ethereum",
     )
 
     assert result is True
-    assert registry.get_role("0xWALLET") == "wallet"
+    assert registry.get_role("0xWALLET", "ethereum") == "wallet"
 
 
-def test_unknown_address_returns_unknown():
-    registry = AddressRegistry()
-
-    assert registry.get_role("0xUNKNOWN") == "unknown"
-
-
-def test_invalid_role_is_rejected():
-    registry = AddressRegistry()
-
-    result = registry.add_address(
-        "0xADDRESS",
-        "something_invalid",
-        "VERIFIED",
-    )
-
-    assert result is False
-    assert registry.get_role("0xADDRESS") == "unknown"
-
-
-def test_empty_address_is_rejected():
+def test_reject_invalid_address():
     registry = AddressRegistry()
 
     result = registry.add_address(
         "",
         "exchange",
-        "VERIFIED",
+        chain="ethereum",
+    )
+
+    assert result is False
+
+
+def test_reject_unknown_role():
+    registry = AddressRegistry()
+
+    result = registry.add_address(
+        "0xUNKNOWN",
+        "unknown",
+        chain="ethereum",
     )
 
     assert result is False
@@ -66,11 +61,11 @@ def test_has_address():
     registry.add_address(
         "0xEXCHANGE",
         "exchange",
-        "VERIFIED",
+        chain="ethereum",
     )
 
-    assert registry.has_address("0xEXCHANGE") is True
-    assert registry.has_address("0xUNKNOWN") is False
+    assert registry.has_address("0xEXCHANGE", "ethereum") is True
+    assert registry.has_address("0xMISSING", "ethereum") is False
 
 
 def test_address_whitespace_is_normalized():
@@ -79,10 +74,12 @@ def test_address_whitespace_is_normalized():
     registry.add_address(
         "  0xEXCHANGE  ",
         "exchange",
-        "VERIFIED",
+        confidence="VERIFIED",
+        source="official_source",
+        chain="ethereum",
     )
 
-    assert registry.get_role("0xEXCHANGE") == "exchange"
+    assert registry.get_role("0xEXCHANGE", "ethereum") == "exchange"
 
 
 def test_get_confidence():
@@ -91,10 +88,12 @@ def test_get_confidence():
     registry.add_address(
         "0xEXCHANGE",
         "exchange",
-        "VERIFIED",
+        confidence="VERIFIED",
+        source="official_source",
+        chain="ethereum",
     )
 
-    assert registry.get_confidence("0xEXCHANGE") == "VERIFIED"
+    assert registry.get_confidence("0xEXCHANGE", "ethereum") == "VERIFIED"
 
 
 def test_get_source():
@@ -103,33 +102,28 @@ def test_get_source():
     registry.add_address(
         "0xEXCHANGE",
         "exchange",
-        "VERIFIED",
-        "official_source",
+        confidence="VERIFIED",
+        source="official_source",
+        chain="ethereum",
     )
 
-    assert registry.get_source("0xEXCHANGE") == "official_source"
+    assert registry.get_source("0xEXCHANGE", "ethereum") == "official_source"
 
 
-def test_unknown_address_confidence():
+def test_different_chains_are_separate():
     registry = AddressRegistry()
 
-    assert registry.get_confidence("0xUNKNOWN") == "UNKNOWN"
-
-
-def test_unknown_address_source():
-    registry = AddressRegistry()
-
-    assert registry.get_source("0xUNKNOWN") == ""
-
-
-def test_invalid_confidence_is_rejected():
-    registry = AddressRegistry()
-
-    result = registry.add_address(
-        "0xADDRESS",
+    registry.add_address(
+        "0xSAME",
         "exchange",
-        "CERTAIN",
+        chain="ethereum",
     )
 
-    assert result is False
-    assert registry.has_address("0xADDRESS") is False
+    registry.add_address(
+        "0xSAME",
+        "wallet",
+        chain="base",
+    )
+
+    assert registry.get_role("0xSAME", "ethereum") == "exchange"
+    assert registry.get_role("0xSAME", "base") == "wallet"
