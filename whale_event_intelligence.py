@@ -22,15 +22,22 @@ class WhaleEvent:
     accumulation_value_usd: float = 0.0
     distribution_value_usd: float = 0.0
     total_value_usd: float = 0.0
+    net_flow_usd: float = 0.0
 
 
 def analyze_whale_event(assessments) -> WhaleEvent:
     """
     Analyze multiple whale assessments as one event.
 
-    Each assessment may optionally provide:
-    - amount_usd
-    - transfer
+    Net flow is calculated as:
+
+        accumulation value - distribution value
+
+    Positive net flow means more value moved toward possible
+    accumulation than possible distribution.
+
+    Negative net flow means more value moved toward possible
+    distribution than possible accumulation.
 
     Supported event classifications:
     - POSSIBLE_ACCUMULATION_EVENT
@@ -88,36 +95,43 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             distribution_value_usd += amount_usd
 
     total_count = len(assessments)
+
     total_value_usd = (
         accumulation_value_usd + distribution_value_usd
     )
 
-    if accumulation_count > distribution_count:
+    net_flow_usd = (
+        accumulation_value_usd - distribution_value_usd
+    )
+
+    if accumulation_value_usd > distribution_value_usd:
         return WhaleEvent(
             classification="POSSIBLE_ACCUMULATION_EVENT",
             transfer_count=total_count,
             confidence=70,
             reason=(
-                "Multiple whale assessments show more possible "
-                "accumulation activity than distribution activity."
+                "Whale activity shows greater USD value in possible "
+                "accumulation than possible distribution."
             ),
             accumulation_value_usd=accumulation_value_usd,
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
+            net_flow_usd=net_flow_usd,
         )
 
-    if distribution_count > accumulation_count:
+    if distribution_value_usd > accumulation_value_usd:
         return WhaleEvent(
             classification="POSSIBLE_DISTRIBUTION_EVENT",
             transfer_count=total_count,
             confidence=70,
             reason=(
-                "Multiple whale assessments show more possible "
-                "distribution activity than accumulation activity."
+                "Whale activity shows greater USD value in possible "
+                "distribution than possible accumulation."
             ),
             accumulation_value_usd=accumulation_value_usd,
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
+            net_flow_usd=net_flow_usd,
         )
 
     if accumulation_count == distribution_count and (
@@ -128,12 +142,13 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             transfer_count=total_count,
             confidence=60,
             reason=(
-                "Whale activity contains an equal number of possible "
-                "accumulation and distribution assessments."
+                "Whale activity has equal USD value in possible "
+                "accumulation and distribution."
             ),
             accumulation_value_usd=accumulation_value_usd,
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
+            net_flow_usd=net_flow_usd,
         )
 
     return WhaleEvent(
@@ -147,4 +162,5 @@ def analyze_whale_event(assessments) -> WhaleEvent:
         accumulation_value_usd=accumulation_value_usd,
         distribution_value_usd=distribution_value_usd,
         total_value_usd=total_value_usd,
+        net_flow_usd=net_flow_usd,
     )
