@@ -37,6 +37,7 @@ def test_accumulation_event():
     assert result.accumulation_value_usd == 600_000
     assert result.distribution_value_usd == 200_000
     assert result.total_value_usd == 800_000
+    assert result.net_flow_usd == 400_000
 
 
 def test_distribution_event():
@@ -54,6 +55,7 @@ def test_distribution_event():
     assert result.accumulation_value_usd == 100_000
     assert result.distribution_value_usd == 1_000_000
     assert result.total_value_usd == 1_100_000
+    assert result.net_flow_usd == -900_000
 
 
 def test_mixed_whale_activity():
@@ -70,6 +72,20 @@ def test_mixed_whale_activity():
     assert result.accumulation_value_usd == 500_000
     assert result.distribution_value_usd == 500_000
     assert result.total_value_usd == 1_000_000
+    assert result.net_flow_usd == 0
+
+
+def test_value_flow_can_override_transfer_count():
+    assessments = [
+        make_assessment("POSSIBLE_ACCUMULATION", 100_000),
+        make_assessment("POSSIBLE_ACCUMULATION", 100_000),
+        make_assessment("POSSIBLE_DISTRIBUTION", 2_000_000),
+    ]
+
+    result = analyze_whale_event(assessments)
+
+    assert result.classification == "POSSIBLE_DISTRIBUTION_EVENT"
+    assert result.net_flow_usd == -1_800_000
 
 
 def test_empty_assessments():
@@ -79,6 +95,7 @@ def test_empty_assessments():
     assert result.transfer_count == 0
     assert result.confidence == 0
     assert result.total_value_usd == 0.0
+    assert result.net_flow_usd == 0.0
 
 
 def test_invalid_assessments_input():
@@ -88,3 +105,4 @@ def test_invalid_assessments_input():
     assert result.transfer_count == 0
     assert result.confidence == 0
     assert result.total_value_usd == 0.0
+    assert result.net_flow_usd == 0.0
