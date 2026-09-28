@@ -23,6 +23,7 @@ class WhaleEvent:
     distribution_value_usd: float = 0.0
     total_value_usd: float = 0.0
     net_flow_usd: float = 0.0
+    flow_strength: float = 0.0
 
 
 def analyze_whale_event(assessments) -> WhaleEvent:
@@ -33,11 +34,12 @@ def analyze_whale_event(assessments) -> WhaleEvent:
 
         accumulation value - distribution value
 
-    Positive net flow means more value moved toward possible
-    accumulation than possible distribution.
+    Flow strength is calculated as:
 
-    Negative net flow means more value moved toward possible
-    distribution than possible accumulation.
+        abs(net flow) / total whale value * 100
+
+    This measures how strongly the observed whale value
+    leans toward accumulation or distribution.
 
     Supported event classifications:
     - POSSIBLE_ACCUMULATION_EVENT
@@ -104,6 +106,13 @@ def analyze_whale_event(assessments) -> WhaleEvent:
         accumulation_value_usd - distribution_value_usd
     )
 
+    if total_value_usd > 0:
+        flow_strength = (
+            abs(net_flow_usd) / total_value_usd
+        ) * 100
+    else:
+        flow_strength = 0.0
+
     if accumulation_value_usd > distribution_value_usd:
         return WhaleEvent(
             classification="POSSIBLE_ACCUMULATION_EVENT",
@@ -117,6 +126,7 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
             net_flow_usd=net_flow_usd,
+            flow_strength=flow_strength,
         )
 
     if distribution_value_usd > accumulation_value_usd:
@@ -132,6 +142,7 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
             net_flow_usd=net_flow_usd,
+            flow_strength=flow_strength,
         )
 
     if accumulation_count == distribution_count and (
@@ -149,6 +160,7 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             distribution_value_usd=distribution_value_usd,
             total_value_usd=total_value_usd,
             net_flow_usd=net_flow_usd,
+            flow_strength=flow_strength,
         )
 
     return WhaleEvent(
@@ -163,4 +175,5 @@ def analyze_whale_event(assessments) -> WhaleEvent:
         distribution_value_usd=distribution_value_usd,
         total_value_usd=total_value_usd,
         net_flow_usd=net_flow_usd,
-    )
+        flow_strength=flow_strength,
+        )
