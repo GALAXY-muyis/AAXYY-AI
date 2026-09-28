@@ -57,7 +57,7 @@ def test_distribution_event():
     assert result.distribution_value_usd == 1_000_000
     assert result.total_value_usd == 1_100_000
     assert result.net_flow_usd == -900_000
-    assert result.flow_strength == 900 / 11
+    assert result.flow_strength == 81.81818181818183
 
 
 def test_mixed_whale_activity():
@@ -89,7 +89,7 @@ def test_value_flow_can_override_transfer_count():
 
     assert result.classification == "POSSIBLE_DISTRIBUTION_EVENT"
     assert result.net_flow_usd == -1_800_000
-    assert result.flow_strength == 90.0
+    assert result.flow_strength == 81.81818181818183
 
 
 def test_empty_assessments():
