@@ -14,6 +14,8 @@ def test_large_transfer_is_detected_as_whale_transfer():
 
     assert result.classification == "WHALE_TRANSFER"
     assert result.confidence == 75
+    assert result.sender_attribution_confidence == "UNKNOWN"
+    assert result.receiver_attribution_confidence == "UNKNOWN"
 
 
 def test_small_transfer_is_normal():
@@ -130,8 +132,19 @@ def test_large_transfer_with_unknown_direction_is_whale_transfer():
 def test_registry_can_identify_exchange_to_wallet():
     registry = AddressRegistry()
 
-    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
-    registry.add_address("0xKNOWN_WALLET", "wallet")
+    registry.add_address(
+        "0xKNOWN_EXCHANGE",
+        "exchange",
+        "VERIFIED",
+        "official_source",
+    )
+
+    registry.add_address(
+        "0xKNOWN_WALLET",
+        "wallet",
+        "LIKELY",
+        "on_chain_analysis",
+    )
 
     transfer = Transfer(
         token="ETH",
@@ -147,13 +160,26 @@ def test_registry_can_identify_exchange_to_wallet():
 
     assert result.classification == "POSSIBLE_ACCUMULATION"
     assert result.confidence == 65
+    assert result.sender_attribution_confidence == "VERIFIED"
+    assert result.receiver_attribution_confidence == "LIKELY"
 
 
 def test_registry_can_identify_wallet_to_exchange():
     registry = AddressRegistry()
 
-    registry.add_address("0xKNOWN_WALLET", "wallet")
-    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
+    registry.add_address(
+        "0xKNOWN_WALLET",
+        "wallet",
+        "LIKELY",
+        "on_chain_analysis",
+    )
+
+    registry.add_address(
+        "0xKNOWN_EXCHANGE",
+        "exchange",
+        "VERIFIED",
+        "official_source",
+    )
 
     transfer = Transfer(
         token="ETH",
@@ -169,13 +195,24 @@ def test_registry_can_identify_wallet_to_exchange():
 
     assert result.classification == "POSSIBLE_DISTRIBUTION"
     assert result.confidence == 65
+    assert result.sender_attribution_confidence == "LIKELY"
+    assert result.receiver_attribution_confidence == "VERIFIED"
 
 
 def test_registry_role_overrides_unknown_transfer_role():
     registry = AddressRegistry()
 
-    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
-    registry.add_address("0xKNOWN_WALLET", "wallet")
+    registry.add_address(
+        "0xKNOWN_EXCHANGE",
+        "exchange",
+        "VERIFIED",
+    )
+
+    registry.add_address(
+        "0xKNOWN_WALLET",
+        "wallet",
+        "LIKELY",
+    )
 
     transfer = Transfer(
         token="ETH",
@@ -193,3 +230,5 @@ def test_registry_role_overrides_unknown_transfer_role():
 
     assert result.classification == "POSSIBLE_ACCUMULATION"
     assert result.confidence == 65
+    assert result.sender_attribution_confidence == "VERIFIED"
+    assert result.receiver_attribution_confidence == "LIKELY"
