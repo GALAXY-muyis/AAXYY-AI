@@ -1,3 +1,4 @@
+from address_registry import AddressRegistry
 from whale_intelligence import Transfer, classify_transfer
 
 
@@ -124,3 +125,71 @@ def test_large_transfer_with_unknown_direction_is_whale_transfer():
 
     assert result.classification == "WHALE_TRANSFER"
     assert result.confidence == 75
+
+
+def test_registry_can_identify_exchange_to_wallet():
+    registry = AddressRegistry()
+
+    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
+    registry.add_address("0xKNOWN_WALLET", "wallet")
+
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xKNOWN_EXCHANGE",
+        receiver="0xKNOWN_WALLET",
+    )
+
+    result = classify_transfer(
+        transfer,
+        address_registry=registry,
+    )
+
+    assert result.classification == "POSSIBLE_ACCUMULATION"
+    assert result.confidence == 65
+
+
+def test_registry_can_identify_wallet_to_exchange():
+    registry = AddressRegistry()
+
+    registry.add_address("0xKNOWN_WALLET", "wallet")
+    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
+
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xKNOWN_WALLET",
+        receiver="0xKNOWN_EXCHANGE",
+    )
+
+    result = classify_transfer(
+        transfer,
+        address_registry=registry,
+    )
+
+    assert result.classification == "POSSIBLE_DISTRIBUTION"
+    assert result.confidence == 65
+
+
+def test_registry_role_overrides_unknown_transfer_role():
+    registry = AddressRegistry()
+
+    registry.add_address("0xKNOWN_EXCHANGE", "exchange")
+    registry.add_address("0xKNOWN_WALLET", "wallet")
+
+    transfer = Transfer(
+        token="ETH",
+        amount_usd=500_000,
+        sender="0xKNOWN_EXCHANGE",
+        receiver="0xKNOWN_WALLET",
+        sender_type="unknown",
+        receiver_type="unknown",
+    )
+
+    result = classify_transfer(
+        transfer,
+        address_registry=registry,
+    )
+
+    assert result.classification == "POSSIBLE_ACCUMULATION"
+    assert result.confidence == 65
