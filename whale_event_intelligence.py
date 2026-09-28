@@ -19,11 +19,18 @@ class WhaleEvent:
     transfer_count: int
     confidence: int
     reason: str
+    accumulation_value_usd: float = 0.0
+    distribution_value_usd: float = 0.0
+    total_value_usd: float = 0.0
 
 
 def analyze_whale_event(assessments) -> WhaleEvent:
     """
     Analyze multiple whale assessments as one event.
+
+    Each assessment may optionally provide:
+    - amount_usd
+    - transfer
 
     Supported event classifications:
     - POSSIBLE_ACCUMULATION_EVENT
@@ -48,17 +55,42 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             reason="No whale assessments were provided.",
         )
 
-    accumulation_count = sum(
-        assessment.classification == "POSSIBLE_ACCUMULATION"
-        for assessment in assessments
-    )
+    accumulation_count = 0
+    distribution_count = 0
+    accumulation_value_usd = 0.0
+    distribution_value_usd = 0.0
 
-    distribution_count = sum(
-        assessment.classification == "POSSIBLE_DISTRIBUTION"
-        for assessment in assessments
-    )
+    for assessment in assessments:
+        classification = getattr(
+            assessment,
+            "classification",
+            "",
+        )
+
+        amount_usd = getattr(
+            assessment,
+            "amount_usd",
+            0.0,
+        )
+
+        if not isinstance(amount_usd, (int, float)):
+            amount_usd = 0.0
+
+        if amount_usd < 0:
+            amount_usd = 0.0
+
+        if classification == "POSSIBLE_ACCUMULATION":
+            accumulation_count += 1
+            accumulation_value_usd += amount_usd
+
+        elif classification == "POSSIBLE_DISTRIBUTION":
+            distribution_count += 1
+            distribution_value_usd += amount_usd
 
     total_count = len(assessments)
+    total_value_usd = (
+        accumulation_value_usd + distribution_value_usd
+    )
 
     if accumulation_count > distribution_count:
         return WhaleEvent(
@@ -69,6 +101,9 @@ def analyze_whale_event(assessments) -> WhaleEvent:
                 "Multiple whale assessments show more possible "
                 "accumulation activity than distribution activity."
             ),
+            accumulation_value_usd=accumulation_value_usd,
+            distribution_value_usd=distribution_value_usd,
+            total_value_usd=total_value_usd,
         )
 
     if distribution_count > accumulation_count:
@@ -80,6 +115,9 @@ def analyze_whale_event(assessments) -> WhaleEvent:
                 "Multiple whale assessments show more possible "
                 "distribution activity than accumulation activity."
             ),
+            accumulation_value_usd=accumulation_value_usd,
+            distribution_value_usd=distribution_value_usd,
+            total_value_usd=total_value_usd,
         )
 
     if accumulation_count == distribution_count and (
@@ -93,6 +131,9 @@ def analyze_whale_event(assessments) -> WhaleEvent:
                 "Whale activity contains an equal number of possible "
                 "accumulation and distribution assessments."
             ),
+            accumulation_value_usd=accumulation_value_usd,
+            distribution_value_usd=distribution_value_usd,
+            total_value_usd=total_value_usd,
         )
 
     return WhaleEvent(
@@ -103,4 +144,7 @@ def analyze_whale_event(assessments) -> WhaleEvent:
             "The assessments do not contain enough accumulation or "
             "distribution evidence to classify a whale event."
         ),
-  )
+        accumulation_value_usd=accumulation_value_usd,
+        distribution_value_usd=distribution_value_usd,
+        total_value_usd=total_value_usd,
+    )
