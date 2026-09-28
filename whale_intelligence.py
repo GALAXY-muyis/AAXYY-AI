@@ -10,6 +10,7 @@ or distribution, but the transfer alone does not prove a buy or sell.
 from dataclasses import dataclass
 
 from address_intelligence import classify_address_role
+from address_registry import AddressRegistry
 
 
 @dataclass
@@ -30,7 +31,10 @@ class WhaleAssessment:
     reason: str
 
 
-def classify_transfer(transfer: Transfer) -> WhaleAssessment:
+def classify_transfer(
+    transfer: Transfer,
+    address_registry: AddressRegistry | None = None,
+) -> WhaleAssessment:
     """Classify a blockchain transfer for whale-intelligence purposes."""
 
     if not isinstance(transfer, Transfer):
@@ -77,6 +81,18 @@ def classify_transfer(transfer: Transfer) -> WhaleAssessment:
 
     sender_role = classify_address_role(transfer.sender_type)
     receiver_role = classify_address_role(transfer.receiver_type)
+
+    if address_registry is not None:
+        registered_sender_role = address_registry.get_role(transfer.sender)
+        registered_receiver_role = address_registry.get_role(
+            transfer.receiver
+        )
+
+        if registered_sender_role != "unknown":
+            sender_role = registered_sender_role
+
+        if registered_receiver_role != "unknown":
+            receiver_role = registered_receiver_role
 
     if sender_role == "exchange" and receiver_role == "wallet":
         return WhaleAssessment(
