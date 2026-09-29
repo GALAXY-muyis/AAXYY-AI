@@ -90,7 +90,6 @@ def analyze_time_window(
 
     if not valid_assessments:
         classification = "NO_WHALE_ACTIVITY"
-
     else:
         classification = "WHALE_ACTIVITY_DETECTED"
 
