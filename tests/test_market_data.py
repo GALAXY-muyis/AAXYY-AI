@@ -7,8 +7,31 @@ import market_data
 from market_data import get_price, get_market_data
 
 
-def test_bitcoin_price_is_positive():
+class FakePriceResponse:
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return {
+            "bitcoin": {
+                "usd": 100000.0,
+            }
+        }
+
+
+def fake_price_get(*args, **kwargs):
+    return FakePriceResponse()
+
+
+def test_bitcoin_price_is_positive(monkeypatch):
+    monkeypatch.setattr(
+        market_data.requests,
+        "get",
+        fake_price_get,
+    )
+
     price = get_price("bitcoin")
+
     assert price > 0
 
 
