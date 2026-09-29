@@ -1,21 +1,17 @@
-from datetime import datetime
+from dataclasses import dataclass
 
-from whale_intelligence import Transfer, classify_transfer
 from whale_time_window_intelligence import analyze_time_window
 
 
-def make_assessment(timestamp):
-    transfer = Transfer(
-        token="ETH",
-        amount_usd=500_000,
-        sender="0xSENDER",
-        receiver="0xRECEIVER",
-        timestamp=timestamp,
-        sender_type="exchange",
-        receiver_type="wallet",
-    )
+@dataclass
+class TimestampedAssessment:
+    timestamp: str
 
-    return classify_transfer(transfer)
+
+def make_assessment(timestamp):
+    return TimestampedAssessment(
+        timestamp=timestamp,
+    )
 
 
 def test_one_hour_window_detects_recent_whale_activity():
