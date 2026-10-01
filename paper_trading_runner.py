@@ -240,8 +240,103 @@ class PaperTradingRunner:
             "opportunity": opportunity,
         }
 
+    def _get_historical_exit(self):
+        """Check historical candles for the first SL/TP touch."""
+
+        position = self.executor.position
+
+        if position is None:
+            return None
+
+        start_time = None
+
+        opened_at = getattr(
+            position,
+            "opened_at",
+            None,
+        )
+
+        if opened_at is not None:
+            try:
+                normalized_time = opened_at
+
+                if normalized_time.endswith("Z"):
+                    normalized_time = (
+                        normalized_time[:-1] + "+00:00"
+                    )
+
+                opened_datetime = datetime.fromisoformat(
+                    normalized_time
+                )
+
+                if opened_datetime.tzinfo is None:
+                    opened_datetime = opened_datetime.replace(
+                        tzinfo=timezone.utc
+                    )
+
+                start_time = int(
+                    opened_datetime.timestamp() * 1000
+                )
+
+            except (TypeError, ValueError):
+                start_time = None
+
+        end_time = int(
+            datetime.now(timezone.utc).timestamp() * 1000
+        )
+
+        candles = self.provider.get_historical_candles(
+            position.symbol,
+            start_time=start_time,
+            end_time=end_time,
+            limit=1000,
+        )
+
+        for candle in candles:
+            if len(candle) < 5:
+                continue
+
+            candle_high = float(candle[2])
+            candle_low = float(candle[3])
+
+            if position.side == "BUY":
+                if (
+                    position.stop_loss is not None
+                    and candle_low <= position.stop_loss
+                ):
+                    return self.executor.check_exit(
+                        position.stop_loss
+                    )
+
+                if (
+                    position.take_profit is not None
+                    and candle_high >= position.take_profit
+                ):
+                    return self.executor.check_exit(
+                        position.take_profit
+                    )
+
+            elif position.side == "SELL":
+                if (
+                    position.stop_loss is not None
+                    and candle_high >= position.stop_loss
+                ):
+                    return self.executor.check_exit(
+                        position.stop_loss
+                    )
+
+                if (
+                    position.take_profit is not None
+                    and candle_low <= position.take_profit
+                ):
+                    return self.executor.check_exit(
+                        position.take_profit
+                    )
+
+        return None
+
     def monitor_open_position(self):
-        """Check the open paper position against the latest market data."""
+        """Check the open paper position against market history and price."""
 
         if self.executor.position is None:
             self.save_state()
@@ -266,6 +361,18 @@ class PaperTradingRunner:
             "low",
             current_price,
         )
+
+        historical_exit = self._get_historical_exit()
+
+        if historical_exit is not None:
+            self.history.append(historical_exit)
+            self.save_state()
+
+            return {
+                "status": "PAPER_TRADE_CLOSED",
+                "exit": historical_exit,
+                "exit_source": "HISTORICAL_CANDLE",
+            }
 
         position = self.executor.position
 
@@ -367,6 +474,4 @@ class PaperTradingRunner:
         self.save_state()
 
         return {
-            "status": "MONITORING_LIMIT_REACHED",
-            "last_status": last_status,
-            }
+            "status": "MONITORING_LIMIT_RE
