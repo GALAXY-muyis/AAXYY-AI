@@ -50,8 +50,6 @@ class BitgetMarketDataProvider(MarketDataProvider):
                 f"Not enough candle data returned for {symbol}."
             )
 
-        # Bitget candle format:
-        # [timestamp, open, high, low, close, base_volume, quote_volume]
         candles = list(reversed(candles))
 
         closes = [float(candle[4]) for candle in candles]
@@ -82,3 +80,60 @@ class BitgetMarketDataProvider(MarketDataProvider):
             "previous_price": previous_price,
             "momentum": momentum,
         }
+
+    def get_historical_candles(
+        self,
+        symbol,
+        start_time=None,
+        end_time=None,
+        limit=1000,
+    ):
+        """Return historical candles in chronological order."""
+
+        symbol = symbol.upper()
+
+        if not symbol.endswith("USDT"):
+            symbol = f"{symbol}USDT"
+
+        if limit <= 0:
+            raise ValueError("Candle limit must be greater than zero.")
+
+        if limit > 1000:
+            raise ValueError(
+                "Candle limit cannot be greater than 1000."
+            )
+
+        params = {
+            "symbol": symbol,
+            "productType": "USDT-FUTURES",
+            "granularity": self.granularity,
+            "limit": limit,
+        }
+
+        if start_time is not None:
+            params["startTime"] = int(start_time)
+
+        if end_time is not None:
+            params["endTime"] = int(end_time)
+
+        response = requests.get(
+            f"{self.BASE_URL}{self.ENDPOINT}",
+            params=params,
+            timeout=10,
+        )
+
+        response.raise_for_status()
+
+        payload = response.json()
+
+        if payload.get("code") != "00000":
+            raise ValueError(
+                f"Bitget API error: {payload.get('msg', 'Unknown error')}"
+            )
+
+        candles = payload.get("data", [])
+
+        if not candles:
+            return []
+
+        return list(reversed(candles))
