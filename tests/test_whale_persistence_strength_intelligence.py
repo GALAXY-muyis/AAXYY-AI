@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import pytest
+
 from whale_persistence_strength_intelligence import (
     analyze_whale_persistence_strength,
 )
@@ -45,7 +47,7 @@ def test_moderate_persistent_accumulation():
     assert result.classification == "MODERATE_PERSISTENT_ACCUMULATION"
     assert result.observation_count == 3
     assert result.dominant_count == 2
-    assert result.consistency_percent == 200 / 3
+    assert result.consistency_percent == pytest.approx(200 / 3)
     assert result.confidence == 70
 
 
@@ -78,7 +80,7 @@ def test_moderate_persistent_distribution():
     assert result.classification == "MODERATE_PERSISTENT_DISTRIBUTION"
     assert result.observation_count == 3
     assert result.dominant_count == 2
-    assert result.consistency_percent == 200 / 3
+    assert result.consistency_percent == pytest.approx(200 / 3)
     assert result.confidence == 70
 
 
