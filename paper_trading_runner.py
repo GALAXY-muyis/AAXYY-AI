@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timezone
 
 from bitget_market_data_provider import BitgetMarketDataProvider
 from bitget_market_universe import BitgetMarketUniverse
@@ -66,6 +67,11 @@ class PaperTradingRunner:
                 take_profit=saved_position.get("take_profit"),
             )
 
+            if "opened_at" in saved_position:
+                self.executor.position.opened_at = (
+                    saved_position["opened_at"]
+                )
+
     def save_state(self):
         """Save the current paper-trading account state."""
 
@@ -83,6 +89,15 @@ class PaperTradingRunner:
                 "stop_loss": self.executor.position.stop_loss,
                 "take_profit": self.executor.position.take_profit,
             }
+
+            opened_at = getattr(
+                self.executor.position,
+                "opened_at",
+                None,
+            )
+
+            if opened_at is not None:
+                position["opened_at"] = opened_at
 
         return self.state.save(
             balance=self.executor.balance,
@@ -213,6 +228,10 @@ class PaperTradingRunner:
             take_profit=opportunity["targets"]["take_profit"],
         )
 
+        self.executor.position.opened_at = (
+            datetime.now(timezone.utc).isoformat()
+        )
+
         self.save_state()
 
         return {
@@ -253,9 +272,6 @@ class PaperTradingRunner:
         exit_result = None
 
         if position.side == "BUY":
-            # If both levels were reached inside the same candle,
-            # stop-loss is handled first because the exact intrabar
-            # order cannot be determined from OHLC data alone.
             if (
                 position.stop_loss is not None
                 and candle_low <= position.stop_loss
@@ -273,9 +289,6 @@ class PaperTradingRunner:
                 )
 
         elif position.side == "SELL":
-            # If both levels were reached inside the same candle,
-            # stop-loss is handled first because the exact intrabar
-            # order cannot be determined from OHLC data alone.
             if (
                 position.stop_loss is not None
                 and candle_high >= position.stop_loss
@@ -293,7 +306,6 @@ class PaperTradingRunner:
                 )
 
         if exit_result is None:
-            # Fallback check against the current price.
             exit_result = self.executor.check_exit(
                 current_price
             )
@@ -357,4 +369,4 @@ class PaperTradingRunner:
         return {
             "status": "MONITORING_LIMIT_REACHED",
             "last_status": last_status,
-        }
+            }
