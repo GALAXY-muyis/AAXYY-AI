@@ -34,6 +34,7 @@ class WhaleAssessment:
     sender_attribution_confidence: str = "UNKNOWN"
     receiver_attribution_confidence: str = "UNKNOWN"
     amount_usd: float = 0.0
+    timestamp: str = ""
 
 
 def classify_transfer(
@@ -55,6 +56,7 @@ def classify_transfer(
             confidence=0,
             reason="Token is missing.",
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     if transfer.amount_usd < 0:
@@ -63,6 +65,7 @@ def classify_transfer(
             confidence=0,
             reason="Transfer amount cannot be negative.",
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     if not transfer.sender or not transfer.receiver:
@@ -71,6 +74,7 @@ def classify_transfer(
             confidence=0,
             reason="Sender or receiver address is missing.",
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     if transfer.sender == transfer.receiver:
@@ -79,6 +83,7 @@ def classify_transfer(
             confidence=100,
             reason="Sender and receiver are the same address.",
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     if transfer.amount_usd < 100_000:
@@ -87,6 +92,7 @@ def classify_transfer(
             confidence=90,
             reason="Transfer is below the whale threshold.",
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     sender_role = classify_address_role(transfer.sender_type)
@@ -137,6 +143,7 @@ def classify_transfer(
             sender_attribution_confidence=sender_attribution_confidence,
             receiver_attribution_confidence=receiver_attribution_confidence,
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     if sender_role == "wallet" and receiver_role == "exchange":
@@ -150,6 +157,7 @@ def classify_transfer(
             sender_attribution_confidence=sender_attribution_confidence,
             receiver_attribution_confidence=receiver_attribution_confidence,
             amount_usd=transfer.amount_usd,
+            timestamp=transfer.timestamp,
         )
 
     return WhaleAssessment(
@@ -162,4 +170,5 @@ def classify_transfer(
         sender_attribution_confidence=sender_attribution_confidence,
         receiver_attribution_confidence=receiver_attribution_confidence,
         amount_usd=transfer.amount_usd,
-    )
+        timestamp=transfer.timestamp,
+        )
