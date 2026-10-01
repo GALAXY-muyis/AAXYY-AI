@@ -222,7 +222,7 @@ class PaperTradingRunner:
         }
 
     def monitor_open_position(self):
-        """Check the open paper position against the latest market price."""
+        """Check the open paper position against the latest market data."""
 
         if self.executor.position is None:
             self.save_state()
@@ -238,7 +238,65 @@ class PaperTradingRunner:
 
         current_price = market_data["price"]
 
-        exit_result = self.executor.check_exit(current_price)
+        candle_high = market_data.get(
+            "high",
+            current_price,
+        )
+
+        candle_low = market_data.get(
+            "low",
+            current_price,
+        )
+
+        position = self.executor.position
+
+        exit_result = None
+
+        if position.side == "BUY":
+            # If both levels were reached inside the same candle,
+            # stop-loss is handled first because the exact intrabar
+            # order cannot be determined from OHLC data alone.
+            if (
+                position.stop_loss is not None
+                and candle_low <= position.stop_loss
+            ):
+                exit_result = self.executor.check_exit(
+                    position.stop_loss
+                )
+
+            elif (
+                position.take_profit is not None
+                and candle_high >= position.take_profit
+            ):
+                exit_result = self.executor.check_exit(
+                    position.take_profit
+                )
+
+        elif position.side == "SELL":
+            # If both levels were reached inside the same candle,
+            # stop-loss is handled first because the exact intrabar
+            # order cannot be determined from OHLC data alone.
+            if (
+                position.stop_loss is not None
+                and candle_high >= position.stop_loss
+            ):
+                exit_result = self.executor.check_exit(
+                    position.stop_loss
+                )
+
+            elif (
+                position.take_profit is not None
+                and candle_low <= position.take_profit
+            ):
+                exit_result = self.executor.check_exit(
+                    position.take_profit
+                )
+
+        if exit_result is None:
+            # Fallback check against the current price.
+            exit_result = self.executor.check_exit(
+                current_price
+            )
 
         if exit_result is not None:
             self.history.append(exit_result)
@@ -255,6 +313,8 @@ class PaperTradingRunner:
             "status": "POSITION_OPEN",
             "symbol": symbol,
             "current_price": current_price,
+            "candle_high": candle_high,
+            "candle_low": candle_low,
             "pnl": self.executor.calculate_pnl(current_price),
         }
 
