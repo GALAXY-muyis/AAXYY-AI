@@ -474,4 +474,6 @@ class PaperTradingRunner:
         self.save_state()
 
         return {
-            "status": "MONITORING_LIMIT_RE
+            "status": "MONITORING_LIMIT_REACHED",
+            "last_status": last_status,
+            }
