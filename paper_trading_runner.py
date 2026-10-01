@@ -25,6 +25,7 @@ class PaperTradingRunner:
 
         self.history = history or PaperTradeHistory()
         self.state = state
+        self.restored_position = False
 
         if self.state is not None:
             saved_state = self.state.load()
@@ -66,6 +67,8 @@ class PaperTradingRunner:
                 stop_loss=saved_position.get("stop_loss"),
                 take_profit=saved_position.get("take_profit"),
             )
+
+            self.restored_position = True
 
             if "opened_at" in saved_position:
                 self.executor.position.opened_at = (
@@ -248,13 +251,13 @@ class PaperTradingRunner:
         if position is None:
             return None
 
-        start_time = None
-
         opened_at = getattr(
             position,
             "opened_at",
             None,
         )
+
+        start_time = None
 
         if opened_at is not None:
             try:
@@ -278,8 +281,20 @@ class PaperTradingRunner:
                     opened_datetime.timestamp() * 1000
                 )
 
+                current_time = int(
+                    datetime.now(timezone.utc).timestamp() * 1000
+                )
+
+                elapsed_time = current_time - start_time
+
+                if elapsed_time < 15 * 60 * 1000:
+                    return None
+
             except (TypeError, ValueError):
                 start_time = None
+
+        elif not self.restored_position:
+            return None
 
         end_time = int(
             datetime.now(timezone.utc).timestamp() * 1000
@@ -336,7 +351,7 @@ class PaperTradingRunner:
         return None
 
     def monitor_open_position(self):
-        """Check the open paper position against market history and price."""
+        """Check the open paper position against market data."""
 
         if self.executor.position is None:
             self.save_state()
@@ -476,4 +491,4 @@ class PaperTradingRunner:
         return {
             "status": "MONITORING_LIMIT_REACHED",
             "last_status": last_status,
-            }
+                }
