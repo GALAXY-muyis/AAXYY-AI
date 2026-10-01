@@ -57,8 +57,13 @@ class BitgetMarketDataProvider(MarketDataProvider):
         closes = [float(candle[4]) for candle in candles]
         volumes = [float(candle[5]) for candle in candles]
 
+        current_candle = candles[-1]
+
         current_price = closes[-1]
         previous_price = closes[-2]
+
+        current_high = float(current_candle[2])
+        current_low = float(current_candle[3])
 
         moving_average = sum(closes) / len(closes)
         current_volume = volumes[-1]
@@ -69,9 +74,11 @@ class BitgetMarketDataProvider(MarketDataProvider):
         return {
             "symbol": symbol,
             "price": current_price,
+            "high": current_high,
+            "low": current_low,
             "moving_average": moving_average,
             "volume": current_volume,
             "average_volume": average_volume,
             "previous_price": previous_price,
             "momentum": momentum,
-      }
+        }
