@@ -1,6 +1,7 @@
 from paper_trade_report import PaperTradeReport
 from paper_trading_runner import PaperTradingRunner
 from paper_trading_state import PaperTradingState
+from paper_trade_history import PaperTradeHistory
 
 
 print("AAXYY AI")
@@ -139,3 +140,28 @@ print(
     f"Profit Factor: "
     f"{performance['profit_factor']}"
 )
+
+print()
+print("PAPER TRADE HISTORY")
+print("------------------------------")
+
+history = PaperTradeHistory()
+trades = history.load()
+
+print(f"History Records: {len(trades)}")
+
+if not trades:
+    print("No completed paper trades recorded.")
+
+else:
+    for number, trade in enumerate(trades, start=1):
+        print(f"Trade {number}")
+        print(f"Symbol: {trade.get('symbol')}")
+        print(f"Side: {trade.get('side')}")
+        print(f"Entry Price: {trade.get('entry_price')}")
+        print(f"Exit Price: {trade.get('exit_price')}")
+        print(f"Quantity: {trade.get('quantity')}")
+        print(f"PnL: {trade.get('pnl')}")
+        print(f"Reason: {trade.get('reason')}")
+        print(f"Balance After: {trade.get('balance_after')}")
+        print("------------------------------")
