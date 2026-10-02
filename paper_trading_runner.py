@@ -75,6 +75,11 @@ class PaperTradingRunner:
                     saved_position["opened_at"]
                 )
 
+            if "decision_snapshot" in saved_position:
+                self.executor.position.decision_snapshot = (
+                    saved_position["decision_snapshot"]
+                )
+
     def save_state(self):
         """Save the current paper-trading account state."""
 
@@ -101,6 +106,17 @@ class PaperTradingRunner:
 
             if opened_at is not None:
                 position["opened_at"] = opened_at
+
+            decision_snapshot = getattr(
+                self.executor.position,
+                "decision_snapshot",
+                None,
+            )
+
+            if decision_snapshot is not None:
+                position["decision_snapshot"] = (
+                    decision_snapshot
+                )
 
         return self.state.save(
             balance=self.executor.balance,
@@ -235,6 +251,21 @@ class PaperTradingRunner:
             datetime.now(timezone.utc).isoformat()
         )
 
+        trade_quality = opportunity.get("trade_quality")
+
+        if isinstance(trade_quality, dict):
+            trade_quality = trade_quality.get("quality")
+
+        self.executor.position.decision_snapshot = {
+            "signal": opportunity.get("signal"),
+            "confidence": opportunity.get("confidence"),
+            "scan_score": opportunity.get("scan_score"),
+            "trade_quality": trade_quality,
+            "risk_reward": opportunity.get("risk_reward"),
+            "market_regime": opportunity.get("market_regime"),
+            "final_decision": opportunity.get("final_decision"),
+        }
+
         self.save_state()
 
         return {
@@ -350,6 +381,24 @@ class PaperTradingRunner:
 
         return None
 
+    def _build_history_record(self, trade):
+        """Add the entry decision snapshot to a completed trade."""
+
+        record = dict(trade)
+
+        decision_snapshot = getattr(
+            self.executor.position,
+            "decision_snapshot",
+            None,
+        )
+
+        if decision_snapshot is not None:
+            record["decision_snapshot"] = dict(
+                decision_snapshot
+            )
+
+        return record
+
     def monitor_open_position(self):
         """Check the open paper position against market data."""
 
@@ -380,7 +429,11 @@ class PaperTradingRunner:
         historical_exit = self._get_historical_exit()
 
         if historical_exit is not None:
-            self.history.append(historical_exit)
+            history_record = self._build_history_record(
+                historical_exit
+            )
+
+            self.history.append(history_record)
             self.save_state()
 
             return {
@@ -433,7 +486,11 @@ class PaperTradingRunner:
             )
 
         if exit_result is not None:
-            self.history.append(exit_result)
+            history_record = self._build_history_record(
+                exit_result
+            )
+
+            self.history.append(history_record)
             self.save_state()
 
             return {
