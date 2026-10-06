@@ -11,12 +11,13 @@ from paper_trading_state import PaperTradingState
 
 class PaperTradingRunner:
     def __init__(
-        self,
-        balance=1000.0,
-        max_trades=3,
-        max_consecutive_losses=3,
-        max_daily_loss_percent=5.0,
-    ):
+    self,
+    balance=1000.0,
+    max_trades=3,
+    max_consecutive_losses=3,
+    max_daily_loss_percent=5.0,
+    symbols=None,
+):
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
             limit=50,
@@ -45,6 +46,8 @@ class PaperTradingRunner:
         )
 
         self.restored_position = False
+    self.symbols = symbols
+    
 
     def restore_state(self):
         saved_state = self.state.load()
