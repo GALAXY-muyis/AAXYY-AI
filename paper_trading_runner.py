@@ -10,151 +10,269 @@ from paper_trading_state import PaperTradingState
 
 
 class PaperTradingRunner:
+    """Run AAXYY AI using real market data in paper-trading mode."""
+
     def __init__(
-    self,
-    balance=1000.0,
-    max_trades=3,
-    max_consecutive_losses=3,
-    max_daily_loss_percent=5.0,
-    symbols=None,
-):
+        self,
+        symbols=None,
+        starting_balance=1000,
+        sleep_function=time.sleep,
+        history=None,
+        state=None,
+    ):
+        self.sleep_function = sleep_function
+        self.last_opportunities = []
+
+        self.history = history or PaperTradeHistory()
+        self.state = state
+        self.restored_position = False
+
+        if self.state is not None:
+            saved_state = self.state.load()
+            starting_balance = saved_state["balance"]
+        else:
+            saved_state = {
+                "balance": float(starting_balance),
+                "position": None,
+            }
+
         self.provider = BitgetMarketDataProvider(
             granularity="15m",
             limit=50,
         )
 
-        self.universe = BitgetMarketUniverse(
-            provider=self.provider,
-        )
-
-        self.scanner = MarketScanner(
-            provider=self.provider,
-            universe=self.universe,
-        )
-
-        self.history = PaperTradeHistory()
-
-        self.state = PaperTradingState(
-            balance=balance,
-        )
+        self.scanner = MarketScanner(self.provider)
 
         self.executor = PaperTradingExecutor(
-            balance=balance,
-            max_trades=max_trades,
-            max_consecutive_losses=max_consecutive_losses,
-            max_daily_loss_percent=max_daily_loss_percent,
+            starting_balance=starting_balance,
         )
 
-        self.restored_position = False
-    self.symbols = symbols
-    
+        if symbols is None:
+            universe = BitgetMarketUniverse(
+                max_symbols=20,
+            )
 
-    def restore_state(self):
-        saved_state = self.state.load()
+            self.symbols = universe.get_symbols()
+        else:
+            self.symbols = symbols
 
-        if not saved_state:
-            return None
+        if saved_state["position"] is not None:
+            saved_position = saved_state["position"]
 
-        self.executor.balance = saved_state.get(
-            "balance",
-            self.executor.balance,
-        )
-
-        position_data = saved_state.get("position")
-
-        if position_data:
             self.executor.position = PaperPosition(
-                symbol=position_data.get("symbol"),
-                side=position_data.get("side"),
-                entry_price=position_data.get("entry_price"),
-                quantity=position_data.get("quantity"),
-                stop_loss=position_data.get("stop_loss"),
-                take_profit=position_data.get("take_profit"),
-            )
-
-            self.executor.position.opened_at = position_data.get(
-                "opened_at"
-            )
-
-            self.executor.position.decision_snapshot = (
-                position_data.get("decision_snapshot")
+                symbol=saved_position["symbol"],
+                side=saved_position["side"],
+                entry_price=saved_position["entry_price"],
+                quantity=saved_position["quantity"],
+                stop_loss=saved_position.get("stop_loss"),
+                take_profit=saved_position.get("take_profit"),
             )
 
             self.restored_position = True
 
-            print(
-                "RESTORED POSITION:"
-                f" {self.executor.position.symbol}"
-                f" {self.executor.position.side}"
-            )
+            if "opened_at" in saved_position:
+                self.executor.position.opened_at = (
+                    saved_position["opened_at"]
+                )
 
-        return saved_state
+            if "decision_snapshot" in saved_position:
+                self.executor.position.decision_snapshot = (
+                    saved_position["decision_snapshot"]
+                )
 
     def save_state(self):
-        position = self.executor.position
+        """Save the current paper-trading account state."""
 
-        position_data = None
+        if self.state is None:
+            return None
 
-        if position is not None:
-            position_data = {
-                "symbol": position.symbol,
-                "side": position.side,
-                "entry_price": position.entry_price,
-                "quantity": position.quantity,
-                "stop_loss": position.stop_loss,
-                "take_profit": position.take_profit,
-                "opened_at": getattr(
-                    position,
-                    "opened_at",
-                    None,
-                ),
-                "decision_snapshot": getattr(
-                    position,
-                    "decision_snapshot",
-                    None,
-                ),
+        position = None
+
+        if self.executor.position is not None:
+            position = {
+                "symbol": self.executor.position.symbol,
+                "side": self.executor.position.side,
+                "entry_price": self.executor.position.entry_price,
+                "quantity": self.executor.position.quantity,
+                "stop_loss": self.executor.position.stop_loss,
+                "take_profit": self.executor.position.take_profit,
             }
 
-        self.state.save(
+            opened_at = getattr(
+                self.executor.position,
+                "opened_at",
+                None,
+            )
+
+            if opened_at is not None:
+                position["opened_at"] = opened_at
+
+            decision_snapshot = getattr(
+                self.executor.position,
+                "decision_snapshot",
+                None,
+            )
+
+            if decision_snapshot is not None:
+                position["decision_snapshot"] = (
+                    decision_snapshot
+                )
+
+        return self.state.save(
             balance=self.executor.balance,
-            position=position_data,
+            position=position,
         )
 
-    def open_best_paper_trade(self, opportunity):
-        if opportunity is None:
-            return None
+    def find_best_opportunity(self):
+        """Scan markets and return the strongest valid opportunity."""
 
-        position = self.executor.open_position(
+        self.last_opportunities = self.scanner.scan_opportunities(
+            self.symbols
+        )
+
+        return self.scanner.select_best_opportunity(
+            self.last_opportunities
+        )
+
+    def open_best_paper_trade(self):
+        """Open the best valid opportunity as a paper trade."""
+
+        if self.executor.position is not None:
+            return {
+                "status": "NO_TRADE",
+                "reason": "POSITION_ALREADY_OPEN",
+            }
+
+        opportunity = self.find_best_opportunity()
+
+        if opportunity is None:
+            top_candidates = []
+
+            for candidate in self.last_opportunities[:5]:
+                trade_quality = candidate.get(
+                    "trade_quality"
+                )
+
+                if isinstance(trade_quality, dict):
+                    trade_quality = trade_quality.get(
+                        "quality"
+                    )
+
+                top_candidates.append(
+                    {
+                        "symbol": candidate.get("symbol"),
+                        "signal": candidate.get("signal"),
+                        "confidence": candidate.get(
+                            "confidence"
+                        ),
+                        "trade_quality": trade_quality,
+                        "risk_reward": candidate.get(
+                            "risk_reward"
+                        ),
+                        "scan_score": candidate.get(
+                            "scan_score"
+                        ),
+                        "valid": candidate.get("valid"),
+                        "final_decision": candidate.get(
+                            "final_decision"
+                        ),
+                    }
+                )
+
+            self.save_state()
+
+            return {
+                "status": "NO_TRADE",
+                "reason": "NO_VALID_OPPORTUNITY",
+                "diagnostic": {
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(
+                        self.last_opportunities
+                    ),
+                    "top_candidates": top_candidates,
+                },
+            }
+
+        if opportunity["final_decision"] not in (
+            "STRONG BUY",
+            "STRONG SELL",
+        ):
+            self.save_state()
+
+            return {
+                "status": "NO_TRADE",
+                "reason": opportunity["final_decision"],
+                "diagnostic": {
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(
+                        self.last_opportunities
+                    ),
+                    "top_candidates": [
+                        {
+                            "symbol": opportunity.get(
+                                "symbol"
+                            ),
+                            "signal": opportunity.get(
+                                "signal"
+                            ),
+                            "confidence": opportunity.get(
+                                "confidence"
+                            ),
+                            "trade_quality": opportunity.get(
+                                "trade_quality"
+                            ),
+                            "risk_reward": opportunity.get(
+                                "risk_reward"
+                            ),
+                            "scan_score": opportunity.get(
+                                "scan_score"
+                            ),
+                            "valid": opportunity.get(
+                                "valid"
+                            ),
+                            "final_decision": opportunity.get(
+                                "final_decision"
+                            ),
+                        }
+                    ],
+                },
+            }
+
+        trade = self.executor.open_position(
             symbol=opportunity["symbol"],
             side=opportunity["signal"],
-            entry_price=opportunity["entry_price"],
-            stop_loss=opportunity["stop_loss"],
-            take_profit=opportunity["take_profit"],
-            position_size=opportunity["position_size"],
+            entry_price=opportunity["price"],
+            quantity=opportunity["position_size"],
+            stop_loss=opportunity["targets"]["stop_loss"],
+            take_profit=opportunity["targets"]["take_profit"],
         )
-
-        if position is None:
-            return None
 
         self.executor.position.opened_at = (
             datetime.now(timezone.utc).isoformat()
         )
 
-        self.executor.position.decision_snapshot = opportunity
+        trade_quality = opportunity.get("trade_quality")
+
+        if isinstance(trade_quality, dict):
+            trade_quality = trade_quality.get("quality")
+
+        self.executor.position.decision_snapshot = {
+            "signal": opportunity.get("signal"),
+            "confidence": opportunity.get("confidence"),
+            "scan_score": opportunity.get("scan_score"),
+            "trade_quality": trade_quality,
+            "risk_reward": opportunity.get("risk_reward"),
+            "market_regime": opportunity.get("market_regime"),
+            "final_decision": opportunity.get("final_decision"),
+        }
 
         self.save_state()
 
-        print(
-            "PAPER_TRADE_OPENED:"
-            f" {position.symbol}"
-            f" {position.side}"
-            f" entry={position.entry_price}"
-            f" qty={position.quantity}"
-            f" sl={position.stop_loss}"
-            f" tp={position.take_profit}"
-        )
-
-        return position
+        return {
+            "status": "PAPER_TRADE_OPENED",
+            "trade": trade,
+            "opportunity": opportunity,
+        }
 
     def _get_historical_exit(self):
         """Check historical candles for the first SL/TP touch."""
@@ -273,4 +391,213 @@ class PaperTradingRunner:
             )
             print(
                 f"  lowest_low={lowest_low}"
+            )
+
+        for candle in valid_candles:
+            candle_high = float(candle[2])
+            candle_low = float(candle[3])
+
+            if position.side == "BUY":
+                if (
+                    position.stop_loss is not None
+                    and candle_low <= position.stop_loss
+                ):
+                    return self.executor.check_exit(
+                        position.stop_loss
+                    )
+
+                if (
+                    position.take_profit is not None
+                    and candle_high >= position.take_profit
+                ):
+                    return self.executor.check_exit(
+                        position.take_profit
+                    )
+
+            elif position.side == "SELL":
+                if (
+                    position.stop_loss is not None
+                    and candle_high >= position.stop_loss
+                ):
+                    return self.executor.check_exit(
+                        position.stop_loss
+                    )
+
+                if (
+                    position.take_profit is not None
+                    and candle_low <= position.take_profit
+                ):
+                    return self.executor.check_exit(
+                        position.take_profit
+                    )
+
+        return None
+
+    def _build_history_record(self, trade):
+        """Add the entry decision snapshot to a completed trade."""
+
+        record = dict(trade)
+
+        decision_snapshot = getattr(
+            self.executor.position,
+            "decision_snapshot",
+            None,
         )
+
+        if decision_snapshot is not None:
+            record["decision_snapshot"] = dict(
+                decision_snapshot
+            )
+
+        return record
+
+    def monitor_open_position(self):
+        """Check the open paper position against market data."""
+
+        if self.executor.position is None:
+            self.save_state()
+
+            return {
+                "status": "NO_POSITION",
+                "reason": "NO_OPEN_POSITION",
+            }
+
+        symbol = self.executor.position.symbol
+
+        market_data = self.provider.get_market_data(symbol)
+
+        current_price = market_data["price"]
+
+        candle_high = market_data.get(
+            "high",
+            current_price,
+        )
+
+        candle_low = market_data.get(
+            "low",
+            current_price,
+        )
+
+        historical_exit = self._get_historical_exit()
+
+        if historical_exit is not None:
+            history_record = self._build_history_record(
+                historical_exit
+            )
+
+            self.history.append(history_record)
+            self.save_state()
+
+            return {
+                "status": "PAPER_TRADE_CLOSED",
+                "exit": historical_exit,
+                "exit_source": "HISTORICAL_CANDLE",
+            }
+
+        position = self.executor.position
+
+        exit_result = None
+
+        if position.side == "BUY":
+            if (
+                position.stop_loss is not None
+                and candle_low <= position.stop_loss
+            ):
+                exit_result = self.executor.check_exit(
+                    position.stop_loss
+                )
+
+            elif (
+                position.take_profit is not None
+                and candle_high >= position.take_profit
+            ):
+                exit_result = self.executor.check_exit(
+                    position.take_profit
+                )
+
+        elif position.side == "SELL":
+            if (
+                position.stop_loss is not None
+                and candle_high >= position.stop_loss
+            ):
+                exit_result = self.executor.check_exit(
+                    position.stop_loss
+                )
+
+            elif (
+                position.take_profit is not None
+                and candle_low <= position.take_profit
+            ):
+                exit_result = self.executor.check_exit(
+                    position.take_profit
+                )
+
+        if exit_result is None:
+            exit_result = self.executor.check_exit(
+                current_price
+            )
+
+        if exit_result is not None:
+            history_record = self._build_history_record(
+                exit_result
+            )
+
+            self.history.append(history_record)
+            self.save_state()
+
+            return {
+                "status": "PAPER_TRADE_CLOSED",
+                "exit": exit_result,
+            }
+
+        self.save_state()
+
+        return {
+            "status": "POSITION_OPEN",
+            "symbol": symbol,
+            "current_price": current_price,
+            "candle_high": candle_high,
+            "candle_low": candle_low,
+            "pnl": self.executor.calculate_pnl(current_price),
+        }
+
+    def monitor_until_exit(
+        self,
+        max_checks=5,
+        interval_seconds=60,
+    ):
+        """Monitor an open paper position for a limited number of checks."""
+
+        if max_checks <= 0:
+            raise ValueError("max_checks must be greater than zero.")
+
+        if interval_seconds < 0:
+            raise ValueError(
+                "interval_seconds cannot be negative."
+            )
+
+        if self.executor.position is None:
+            self.save_state()
+
+            return {
+                "status": "NO_POSITION",
+                "reason": "NO_OPEN_POSITION",
+            }
+
+        last_status = None
+
+        for check_number in range(max_checks):
+            last_status = self.monitor_open_position()
+
+            if last_status["status"] == "PAPER_TRADE_CLOSED":
+                return last_status
+
+            if check_number < max_checks - 1:
+                self.sleep_function(interval_seconds)
+
+        self.save_state()
+
+        return {
+            "status": "MONITORING_LIMIT_REACHED",
+            "last_status": last_status,
+                    }
