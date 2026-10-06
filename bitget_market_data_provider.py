@@ -136,4 +136,7 @@ class BitgetMarketDataProvider(MarketDataProvider):
         if not candles:
             return []
 
-        return list(reversed(candles))
+        return sorted(
+            candles,
+            key=lambda candle: int(candle[0]),
+        )
