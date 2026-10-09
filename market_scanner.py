@@ -51,27 +51,40 @@ class MarketScanner:
         self.data_provider = data_provider
 
     def scan(self, symbols):
-        """Scan multiple markets concurrently."""
+        """Scan markets safely, skipping individual request failures."""
 
         def scan_symbol(symbol):
-            data = self.data_provider.get_market_data(symbol)
+            try:
+                data = self.data_provider.get_market_data(symbol)
 
-            validation = validate_market_data(
-                price=data["price"],
-                moving_average=data["moving_average"],
-                volume=data["volume"],
-                average_volume=data["average_volume"],
-            )
+                validation = validate_market_data(
+                    price=data["price"],
+                    moving_average=data["moving_average"],
+                    volume=data["volume"],
+                    average_volume=data["average_volume"],
+                )
 
-            if validation["valid"]:
-                return data
+                if validation["valid"]:
+                    return data
 
-            return None
+                print(
+                    f"Skipping {symbol}: "
+                    "market data failed validation."
+                )
+                return None
+
+            except Exception as error:
+                print(
+                    f"Skipping {symbol}: "
+                    f"market data request failed ({error})."
+                )
+                return None
 
         if not symbols:
             return []
 
-        max_workers = min(5, len(symbols))
+        # Lower concurrency to reduce bursts of requests to Bitget.
+        max_workers = min(2, len(symbols))
 
         with ThreadPoolExecutor(
             max_workers=max_workers
