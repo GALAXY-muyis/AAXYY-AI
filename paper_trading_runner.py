@@ -49,7 +49,7 @@ class PaperTradingRunner:
 
         if symbols is None:
             universe = BitgetMarketUniverse(
-                max_symbols=20,
+                max_symbols=250,
             )
 
             self.symbols = universe.get_symbols()
@@ -135,15 +135,28 @@ class PaperTradingRunner:
         )
 
     def open_best_paper_trade(self):
-        """Open the best valid opportunity as a paper trade."""
+        """Scan markets and open a trade only when permitted."""
+
+        opportunity = self.find_best_opportunity()
 
         if self.executor.position is not None:
+            self.save_state()
+
             return {
                 "status": "NO_TRADE",
                 "reason": "POSITION_ALREADY_OPEN",
+                "diagnostic": {
+                    "markets_scanned": len(self.symbols),
+                    "opportunities_found": len(
+                        self.last_opportunities
+                    ),
+                    "best_opportunity": (
+                        opportunity.get("symbol")
+                        if opportunity is not None
+                        else None
+                    ),
+                },
             }
-
-        opportunity = self.find_best_opportunity()
 
         if opportunity is None:
             top_candidates = []
@@ -600,4 +613,4 @@ class PaperTradingRunner:
         return {
             "status": "MONITORING_LIMIT_REACHED",
             "last_status": last_status,
-                    }
+            }
