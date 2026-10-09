@@ -22,6 +22,36 @@ result = runner.open_best_paper_trade()
 
 print(f"Status: {result['status']}")
 
+diagnostic = result.get("diagnostic", {})
+
+if diagnostic:
+    print()
+    print("MARKET SCAN DIAGNOSTICS")
+    print("------------------------------")
+    print(
+        f"Markets Scanned: "
+        f"{diagnostic.get('markets_scanned', 0)}"
+    )
+    print(
+        f"Opportunities Found: "
+        f"{diagnostic.get('opportunities_found', 0)}"
+    )
+
+    best_opportunity = diagnostic.get("best_opportunity")
+
+    if best_opportunity:
+        print(
+            f"Best Opportunity: {best_opportunity}"
+        )
+
+    top_candidates = diagnostic.get("top_candidates", [])
+
+    for number, candidate in enumerate(
+        top_candidates[:5],
+        start=1,
+    ):
+        print(f"Candidate {number}: {candidate}")
+
 should_monitor = result["status"] == "PAPER_TRADE_OPENED"
 
 if (
@@ -35,6 +65,9 @@ if should_monitor:
     if result["status"] == "PAPER_TRADE_OPENED":
         trade = result["trade"]
 
+        print()
+        print("NEW PAPER POSITION")
+        print("------------------------------")
         print(f"Symbol: {trade['symbol']}")
         print(f"Side: {trade['side']}")
         print(f"Entry Price: {trade['entry_price']}")
@@ -45,6 +78,7 @@ if should_monitor:
     else:
         position = runner.executor.position
 
+        print()
         print("RESTORED PAPER POSITION")
         print("------------------------------")
         print(f"Symbol: {position.symbol}")
@@ -91,18 +125,6 @@ if should_monitor:
 
 elif result["status"] == "NO_TRADE":
     print(f"Reason: {result['reason']}")
-
-    diagnostic = result.get("diagnostic", {})
-
-    print(
-        f"Markets Scanned: "
-        f"{diagnostic.get('markets_scanned', 0)}"
-    )
-
-    print(
-        f"Opportunities Found: "
-        f"{diagnostic.get('opportunities_found', 0)}"
-    )
 
 print()
 print("PAPER TRADING PERFORMANCE")
