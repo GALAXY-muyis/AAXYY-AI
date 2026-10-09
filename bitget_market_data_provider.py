@@ -13,20 +13,18 @@ class BitgetMarketDataProvider(MarketDataProvider):
         self.granularity = granularity
         self.limit = limit
 
-    def get_market_data(self, symbol):
-        """Return market data in the format expected by MarketScanner."""
+    def _normalize_symbol(self, symbol):
+        """Normalize a symbol to its USDT futures form."""
 
         symbol = symbol.upper()
 
         if not symbol.endswith("USDT"):
             symbol = f"{symbol}USDT"
 
-        params = {
-            "symbol": symbol,
-            "productType": "USDT-FUTURES",
-            "granularity": self.granularity,
-            "limit": self.limit,
-        }
+        return symbol
+
+    def _request_candles(self, symbol, params):
+        """Request a single batch of historical candles."""
 
         response = requests.get(
             f"{self.BASE_URL}{self.ENDPOINT}",
@@ -40,17 +38,35 @@ class BitgetMarketDataProvider(MarketDataProvider):
 
         if payload.get("code") != "00000":
             raise ValueError(
-                f"Bitget API error: {payload.get('msg', 'Unknown error')}"
+                f"Bitget API error: "
+                f"{payload.get('msg', 'Unknown error')}"
             )
 
-        candles = payload.get("data", [])
+        return payload.get("data", [])
+
+    def get_market_data(self, symbol):
+        """Return market data in the format expected by MarketScanner."""
+
+        symbol = self._normalize_symbol(symbol)
+
+        params = {
+            "symbol": symbol,
+            "productType": "USDT-FUTURES",
+            "granularity": self.granularity,
+            "limit": self.limit,
+        }
+
+        candles = self._request_candles(symbol, params)
 
         if len(candles) < 2:
             raise ValueError(
                 f"Not enough candle data returned for {symbol}."
             )
 
-        candles = list(reversed(candles))
+        candles = sorted(
+            candles,
+            key=lambda candle: int(candle[0]),
+        )
 
         closes = [float(candle[4]) for candle in candles]
         volumes = [float(candle[5]) for candle in candles]
@@ -88,15 +104,19 @@ class BitgetMarketDataProvider(MarketDataProvider):
         end_time=None,
         limit=1000,
     ):
-        """Return historical candles in chronological order."""
+        """Retrieve historical candles in chronological order.
 
-        symbol = symbol.upper()
+        When start_time is supplied, fetch consecutive batches backwards
+        from end_time until the requested start is reached or the API
+        returns no further data.
+        """
 
-        if not symbol.endswith("USDT"):
-            symbol = f"{symbol}USDT"
+        symbol = self._normalize_symbol(symbol)
 
         if limit <= 0:
-            raise ValueError("Candle limit must be greater than zero.")
+            raise ValueError(
+                "Candle limit must be greater than zero."
+            )
 
         if limit > 1000:
             raise ValueError(
@@ -111,32 +131,67 @@ class BitgetMarketDataProvider(MarketDataProvider):
         }
 
         if start_time is not None:
-            params["startTime"] = int(start_time)
+            start_time = int(start_time)
+            params["startTime"] = start_time
 
         if end_time is not None:
-            params["endTime"] = int(end_time)
+            end_time = int(end_time)
+            params["endTime"] = end_time
 
-        response = requests.get(
-            f"{self.BASE_URL}{self.ENDPOINT}",
-            params=params,
-            timeout=10,
-        )
+        all_candles = {}
+        current_end_time = end_time
 
-        response.raise_for_status()
+        while True:
+            if current_end_time is not None:
+                params["endTime"] = current_end_time
 
-        payload = response.json()
+            batch = self._request_candles(symbol, params)
 
-        if payload.get("code") != "00000":
-            raise ValueError(
-                f"Bitget API error: {payload.get('msg', 'Unknown error')}"
+            valid_batch = [
+                candle
+                for candle in batch
+                if len(candle) >= 5
+            ]
+
+            if not valid_batch:
+                break
+
+            for candle in valid_batch:
+                timestamp = int(candle[0])
+
+                if start_time is not None and timestamp < start_time:
+                    continue
+
+                if end_time is not None and timestamp > end_time:
+                    continue
+
+                all_candles[timestamp] = candle
+
+            if start_time is None:
+                break
+
+            oldest_timestamp = min(
+                int(candle[0])
+                for candle in valid_batch
             )
 
-        candles = payload.get("data", [])
+            if oldest_timestamp <= start_time:
+                break
 
-        if not candles:
-            return []
+            if len(valid_batch) < limit:
+                break
 
-        return sorted(
-            candles,
-            key=lambda candle: int(candle[0]),
-        )
+            next_end_time = oldest_timestamp - 1
+
+            if (
+                current_end_time is not None
+                and next_end_time >= current_end_time
+            ):
+                break
+
+            current_end_time = next_end_time
+
+        return [
+            all_candles[timestamp]
+            for timestamp in sorted(all_candles)
+        ]
