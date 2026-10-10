@@ -1,52 +1,3 @@
-name: Python application
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  schedule:
-    - cron: "*/15 * * * *"
-
-permissions:
-  contents: read
-  actions: read
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-    - name: Prepare isolated paper trading data
-      shell: bash
-      run: |
-        set -e
-
-        rm -f paper_trade_history.json
-        rm -f paper_trading_state.json
-        rm -f previous_state.zip
-        rm -f previous_history.zip
-
-        rm -rf .aaxyy_runtime_data
-
-        mkdir -p .aaxyy_runtime_data/state
-        mkdir -p .aaxyy_runtime_data/history
-
-        echo "Production paper-trading files cleared before tests."
-
     - name: Restore previous paper trading data
       if: github.event_name == 'push' || github.event_name == 'schedule'
       shell: bash
@@ -56,19 +7,25 @@ jobs:
         set -euo pipefail
 
         echo "Looking for previous AAXYY paper-trading data..."
+        echo "Empty history artifacts will be skipped."
 
         RUN_IDS=$(
           curl -fsSL \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/python-app.yml/runs?branch=main&status=success&per_page=20" |
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/python-app.yml/runs?branch=main&status=success&per_page=100" |
           jq -r --arg current "${{ github.run_id }}" \
             '.workflow_runs[] | select(.id|tostring != $current) | .id'
         )
 
-        FOUND_DATA=false
+        FOUND_STATE=false
+        FOUND_HISTORY=false
 
         for RUN_ID in $RUN_IDS; do
+          if [ "$FOUND_STATE" = true ] && [ "$FOUND_HISTORY" = true ]; then
+            break
+          fi
+
           echo "Checking successful run: $RUN_ID"
 
           ARTIFACTS=$(
@@ -92,118 +49,62 @@ jobs:
             head -n 1
           )
 
-          if [ -n "$STATE_ARTIFACT_ID" ] && [ -n "$HISTORY_ARTIFACT_ID" ]; then
-            echo "Found matching state and history artifacts."
-            echo "Source run: $RUN_ID"
-            echo "State artifact: $STATE_ARTIFACT_ID"
-            echo "History artifact: $HISTORY_ARTIFACT_ID"
+          if [ "$FOUND_STATE" = false ] && [ -n "$STATE_ARTIFACT_ID" ]; then
+            echo "Checking state artifact from run $RUN_ID"
 
             curl -fsSL \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$STATE_ARTIFACT_ID/zip" \
-              -o previous_state.zip
+              -o candidate_state.zip
+
+            mkdir -p candidate_state
+
+            if unzip -oq candidate_state.zip -d candidate_state &&
+              python -c 'import json; p="candidate_state/paper_trading_state.json"; d=json.load(open(p, encoding="utf-8")); assert isinstance(d, dict) and "balance" in d and "position" in d' 2>/dev/null; then
+              cp candidate_state/paper_trading_state.json \
+                .aaxyy_runtime_data/state/paper_trading_state.json
+              FOUND_STATE=true
+              echo "Restored latest valid state from run $RUN_ID."
+            else
+              echo "Invalid state artifact; checking older runs."
+            fi
+
+            rm -rf candidate_state candidate_state.zip
+          fi
+
+          if [ "$FOUND_HISTORY" = false ] && [ -n "$HISTORY_ARTIFACT_ID" ]; then
+            echo "Checking history artifact from run $RUN_ID"
 
             curl -fsSL \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$HISTORY_ARTIFACT_ID/zip" \
-              -o previous_history.zip
+              -o candidate_history.zip
 
-            unzip -o previous_state.zip -d .aaxyy_runtime_data/state
-            unzip -o previous_history.zip -d .aaxyy_runtime_data/history
+            mkdir -p candidate_history
 
-            FOUND_DATA=true
-            break
+            if unzip -oq candidate_history.zip -d candidate_history &&
+              python -c 'import json; p="candidate_history/paper_trade_history.json"; d=json.load(open(p, encoding="utf-8")); assert isinstance(d, list) and len(d) > 0' 2>/dev/null; then
+              cp candidate_history/paper_trade_history.json \
+                .aaxyy_runtime_data/history/paper_trade_history.json
+              FOUND_HISTORY=true
+              echo "Restored non-empty history from run $RUN_ID."
+            else
+              echo "History is empty or invalid; checking older runs."
+            fi
+
+            rm -rf candidate_history candidate_history.zip
           fi
-
-          echo "This run does not contain both required paper-trading artifacts."
         done
 
-        if [ "$FOUND_DATA" = false ]; then
-          echo "No matching previous paper-trading data found."
-        else
-          echo "Previous paper-trading data restored into isolated runtime storage."
+        if [ "$FOUND_STATE" = false ]; then
+          echo "No valid previous paper-trading state found."
         fi
 
-    - name: Clean synthetic paper trade history
-      shell: bash
-      run: |
-        set -e
-
-        HISTORY_FILE=".aaxyy_runtime_data/history/paper_trade_history.json"
-
-        if [ -f "$HISTORY_FILE" ]; then
-          python -c 'import json; p=".aaxyy_runtime_data/history/paper_trade_history.json"; trades=json.load(open(p, encoding="utf-8")); cleaned=[t for t in trades if not (t.get("symbol")=="BTCUSDT" and t.get("side")=="BUY" and t.get("entry_price")==100.0 and t.get("exit_price")==110.0 and t.get("quantity")==1.0 and t.get("pnl")==10.0 and t.get("reason")=="TAKE_PROFIT" and t.get("balance_after")==1010.0)]; print(f"Synthetic BTC trades removed: {len(trades)-len(cleaned)}"); print(f"Clean history records: {len(cleaned)}"); json.dump(cleaned, open(p, "w", encoding="utf-8"), indent=2)'
-        else
-          echo "No previous paper-trade history found."
+        if [ "$FOUND_HISTORY" = false ]; then
+          echo "No non-empty valid previous history found."
         fi
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Test with pytest
-      run: |
-        pytest
-
-    - name: Install clean paper trading data
-      shell: bash
-      run: |
-        set -e
-
-        echo "Removing any paper-trading files created during tests..."
-
-        rm -f paper_trade_history.json
-        rm -f paper_trading_state.json
-
-        STATE_FILE=".aaxyy_runtime_data/state/paper_trading_state.json"
-        HISTORY_FILE=".aaxyy_runtime_data/history/paper_trade_history.json"
-
-        if [ -f "$STATE_FILE" ]; then
-          cp "$STATE_FILE" paper_trading_state.json
-          echo "Clean previous paper-trading state installed."
-        else
-          echo "No previous paper-trading state available."
-        fi
-
-        if [ -f "$HISTORY_FILE" ]; then
-          cp "$HISTORY_FILE" paper_trade_history.json
-          echo "Clean previous paper-trade history installed."
-        else
-          echo "No previous paper-trade history available."
-        fi
-
-    - name: Validate paper trading data
-      shell: bash
-      run: |
-        set -e
-
-        if [ -f paper_trade_history.json ]; then
-          python -c 'import json; p="paper_trade_history.json"; trades=json.load(open(p, encoding="utf-8")); synthetic=[t for t in trades if t.get("symbol")=="BTCUSDT" and t.get("side")=="BUY" and t.get("entry_price")==100.0 and t.get("exit_price")==110.0 and t.get("quantity")==1.0 and t.get("pnl")==10.0 and t.get("reason")=="TAKE_PROFIT" and t.get("balance_after")==1010.0]; assert not synthetic, "Synthetic BTC trade detected in production history"; print(f"Validated production history: {len(trades)} records")'
-        else
-          echo "No existing paper-trade history. Main.py will create it when required."
-        fi
-
-    - name: Run AAXYY paper trading
-      run: |
-        python main.py
-
-    - name: Upload paper trade history
-      if: github.event_name == 'push' || github.event_name == 'schedule'
-      uses: actions/upload-artifact@v4
-      with:
-        name: aaxyy-paper-trade-history
-        path: paper_trade_history.json
-        if-no-files-found: ignore
-        retention-days: 90
-
-    - name: Upload paper trading state
-      if: github.event_name == 'push' || github.event_name == 'schedule'
-      uses: actions/upload-artifact@v4
-      with:
-        name: aaxyy-paper-trading-state
-        path: paper_trading_state.json
-        if-no-files-found: ignore
-        retention-days: 90
+        echo "Paper-trading state found: $FOUND_STATE"
+        echo "Non-empty paper-trade history found: $FOUND_HISTORY"
