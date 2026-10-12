@@ -45,7 +45,7 @@ def calculate_scan_score(
 
 
 class MarketScanner:
-    """Scan multiple markets and return valid market data."""
+    """Scan markets and apply AAXYY trading-safety checks."""
 
     def __init__(self, data_provider):
         self.data_provider = data_provider
@@ -83,7 +83,7 @@ class MarketScanner:
         if not symbols:
             return []
 
-        # Lower concurrency to reduce bursts of requests to Bitget.
+        # Limit concurrency to reduce bursts of requests to Bitget.
         max_workers = min(2, len(symbols))
 
         with ThreadPoolExecutor(
@@ -118,8 +118,14 @@ class MarketScanner:
 
         return analyzed_markets
 
-    def run_pipeline(self, markets):
-        """Run analyzed markets through the AAXYY pipeline."""
+    def run_pipeline(
+        self,
+        markets,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    ):
+        """Run markets through the pipeline with supplied risk counters."""
 
         results = []
 
@@ -146,15 +152,16 @@ class MarketScanner:
                 risk_percent=2,
                 entry_price=entry_price,
                 stop_loss=stop_loss,
+                trades_today=trades_today,
+                consecutive_losses=consecutive_losses,
+                daily_loss_percent=daily_loss_percent,
             )
 
             combined = dict(market)
             combined.update(result)
 
             risk_gate_allowed = result["risk_gate"]["allowed"]
-            trading_guard_allowed = result["trading_guard"][
-                "allowed"
-            ]
+            trading_guard_allowed = result["trading_guard"]["allowed"]
 
             combined["valid"] = (
                 risk_gate_allowed
@@ -167,12 +174,24 @@ class MarketScanner:
 
         return results
 
-    def scan_opportunities(self, symbols):
-        """Scan, analyze, run the pipeline, and rank markets."""
+    def scan_opportunities(
+        self,
+        symbols,
+        trades_today=0,
+        consecutive_losses=0,
+        daily_loss_percent=0,
+    ):
+        """Scan, analyze, apply risk counters, and rank markets."""
 
         markets = self.scan(symbols)
         analyzed = self.analyze_markets(markets)
-        pipeline_results = self.run_pipeline(analyzed)
+
+        pipeline_results = self.run_pipeline(
+            analyzed,
+            trades_today=trades_today,
+            consecutive_losses=consecutive_losses,
+            daily_loss_percent=daily_loss_percent,
+        )
 
         for market in pipeline_results:
             market["risk_reward"] = market["targets"]["risk_reward"]
