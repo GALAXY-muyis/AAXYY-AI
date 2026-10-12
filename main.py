@@ -22,19 +22,42 @@ result = runner.open_best_paper_trade()
 
 print(f"Status: {result['status']}")
 
+if (
+    result["status"] == "NO_TRADE"
+    and result.get("reason") == "POSITION_ALREADY_OPEN"
+):
+    print(
+        "Reason: POSITION_ALREADY_OPEN "
+        "(monitoring the existing position; "
+        "no second position opened)."
+    )
+
 diagnostic = result.get("diagnostic", {})
 
 if diagnostic:
     print()
     print("MARKET SCAN DIAGNOSTICS")
     print("------------------------------")
+
     print(
-        f"Markets Scanned: "
+        f"Markets Requested: "
         f"{diagnostic.get('markets_scanned', 0)}"
     )
+
     print(
-        f"Opportunities Found: "
-        f"{diagnostic.get('opportunities_found', 0)}"
+        f"Markets Analyzed: "
+        f"{len(runner.last_opportunities)}"
+    )
+
+    valid_opportunities = sum(
+        1
+        for candidate in runner.last_opportunities
+        if candidate.get("valid", False)
+    )
+
+    print(
+        f"Valid Opportunities: "
+        f"{valid_opportunities}"
     )
 
     best_opportunity = diagnostic.get("best_opportunity")
@@ -134,30 +157,37 @@ report = PaperTradeReport()
 performance = report.generate()
 
 print(f"Total Trades: {performance['total_trades']}")
+
 print(
     f"Winning Trades: "
     f"{performance['winning_trades']}"
 )
+
 print(
     f"Losing Trades: "
     f"{performance['losing_trades']}"
 )
+
 print(
     f"Breakeven Trades: "
     f"{performance['breakeven_trades']}"
 )
+
 print(
     f"Win Rate: "
     f"{performance['win_rate']:.2f}%"
 )
+
 print(
     f"Total PnL: "
     f"{performance['total_pnl']:.2f}"
 )
+
 print(
     f"Average PnL: "
     f"{performance['average_pnl']:.2f}"
 )
+
 print(
     f"Profit Factor: "
     f"{performance['profit_factor']}"
