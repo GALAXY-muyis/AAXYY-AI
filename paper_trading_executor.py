@@ -16,6 +16,7 @@ It supports:
 """
 
 from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
 from typing import Optional, List, Dict
 
 
@@ -62,15 +63,12 @@ class PaperTradingExecutor:
             raise ValueError("Risk percentage must be greater than zero.")
 
         risk_amount = self.balance * (risk_percent / 100)
-
         price_distance = abs(entry_price - stop_loss)
 
         if price_distance == 0:
             raise ValueError("Entry price and stop-loss cannot be equal.")
 
-        quantity = risk_amount / price_distance
-
-        return quantity
+        return risk_amount / price_distance
 
     def open_position(
         self,
@@ -150,6 +148,9 @@ class PaperTradingExecutor:
         self.balance += pnl
         self.realized_pnl += pnl
 
+        # Store an explicit UTC timestamp for daily risk calculations.
+        closed_at = datetime.now(timezone.utc).isoformat()
+
         trade = {
             "symbol": self.position.symbol,
             "side": self.position.side,
@@ -159,10 +160,10 @@ class PaperTradingExecutor:
             "pnl": pnl,
             "reason": reason,
             "balance_after": self.balance,
+            "closed_at": closed_at,
         }
 
         self.trade_history.append(trade)
-
         self.position = None
 
         return trade
@@ -177,7 +178,6 @@ class PaperTradingExecutor:
             raise ValueError("Current price must be greater than zero.")
 
         side = self.position.side
-
         stop_loss = self.position.stop_loss
         take_profit = self.position.take_profit
 
