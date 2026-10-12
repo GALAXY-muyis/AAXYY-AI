@@ -123,103 +123,103 @@ class PaperTradingRunner:
             position=position,
         )
 
-    def find_best_opportunity(self):
-"""Scan markets using safety counters calculated from saved history."""
+        def find_best_opportunity(self):
+        """Scan markets using safety counters calculated from saved history."""
 
-    history = self.history.load()
-    now = datetime.now(timezone.utc)
-    today = now.date()
-    timestamped_trades = []
+        history = self.history.load()
+        now = datetime.now(timezone.utc)
+        today = now.date()
+        timestamped_trades = []
 
-    for trade in history:
-        if not isinstance(trade, dict):
-            continue
+        for trade in history:
+            if not isinstance(trade, dict):
+                continue
 
-        closed_at = trade.get("closed_at")
-        if not isinstance(closed_at, str) or not closed_at.strip():
-            continue
+            closed_at = trade.get("closed_at")
+            if not isinstance(closed_at, str) or not closed_at.strip():
+                continue
 
-        try:
-            timestamp = datetime.fromisoformat(
-                closed_at.replace("Z", "+00:00")
-            )
-            if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
-            timestamp = timestamp.astimezone(timezone.utc)
-        except (TypeError, ValueError):
-            continue
-
-        timestamped_trades.append((timestamp, trade))
-
-    todays_trades = [
-        (timestamp, trade)
-        for timestamp, trade in timestamped_trades
-        if timestamp.date() == today
-    ]
-    trades_today = len(todays_trades)
-
-    daily_loss_percent = 0.0
-
-    if todays_trades:
-        todays_trades.sort(key=lambda item: item[0])
-        daily_pnl = 0.0
-
-        for _, trade in todays_trades:
             try:
-                daily_pnl += float(trade.get("pnl", 0.0))
+                timestamp = datetime.fromisoformat(
+                    closed_at.replace("Z", "+00:00")
+                )
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=timezone.utc)
+                timestamp = timestamp.astimezone(timezone.utc)
             except (TypeError, ValueError):
                 continue
 
-        first_trade = todays_trades[0][1]
+            timestamped_trades.append((timestamp, trade))
 
-        try:
-            day_start_balance = (
-                float(first_trade["balance_after"])
-                - float(first_trade.get("pnl", 0.0))
-            )
-        except (KeyError, TypeError, ValueError):
-            day_start_balance = 0.0
+        todays_trades = [
+            (timestamp, trade)
+            for timestamp, trade in timestamped_trades
+            if timestamp.date() == today
+        ]
+        trades_today = len(todays_trades)
 
-        if day_start_balance > 0:
-            daily_loss_percent = (
-                max(0.0, -daily_pnl)
-                / day_start_balance
-                * 100
-            )
+        daily_loss_percent = 0.0
 
-    consecutive_losses = 0
+        if todays_trades:
+            todays_trades.sort(key=lambda item: item[0])
+            daily_pnl = 0.0
 
-    for trade in reversed(history):
-        if not isinstance(trade, dict):
-            break
+            for _, trade in todays_trades:
+                try:
+                    daily_pnl += float(trade.get("pnl", 0.0))
+                except (TypeError, ValueError):
+                    continue
 
-        try:
-            pnl = float(trade.get("pnl", 0.0))
-        except (TypeError, ValueError):
-            break
+            first_trade = todays_trades[0][1]
 
-        if pnl < 0:
-            consecutive_losses += 1
-        else:
-            break
+            try:
+                day_start_balance = (
+                    float(first_trade["balance_after"])
+                    - float(first_trade.get("pnl", 0.0))
+                )
+            except (KeyError, TypeError, ValueError):
+                day_start_balance = 0.0
 
-    print(
-        "Paper safety counters: "
-        f"trades_today={trades_today}, "
-        f"consecutive_losses={consecutive_losses}, "
-        f"daily_loss_percent={daily_loss_percent:.2f}"
-    )
+            if day_start_balance > 0:
+                daily_loss_percent = (
+                    max(0.0, -daily_pnl)
+                    / day_start_balance
+                    * 100
+                )
 
-    self.last_opportunities = self.scanner.scan_opportunities(
-        self.symbols,
-        trades_today=trades_today,
-        consecutive_losses=consecutive_losses,
-        daily_loss_percent=daily_loss_percent,
-    )
+        consecutive_losses = 0
 
-    return self.scanner.select_best_opportunity(
-        self.last_opportunities
-            )
+        for trade in reversed(history):
+            if not isinstance(trade, dict):
+                break
+
+            try:
+                pnl = float(trade.get("pnl", 0.0))
+            except (TypeError, ValueError):
+                break
+
+            if pnl < 0:
+                consecutive_losses += 1
+            else:
+                break
+
+        print(
+            "Paper safety counters: "
+            f"trades_today={trades_today}, "
+            f"consecutive_losses={consecutive_losses}, "
+            f"daily_loss_percent={daily_loss_percent:.2f}"
+        )
+
+        self.last_opportunities = self.scanner.scan_opportunities(
+            self.symbols,
+            trades_today=trades_today,
+            consecutive_losses=consecutive_losses,
+            daily_loss_percent=daily_loss_percent,
+        )
+
+        return self.scanner.select_best_opportunity(
+            self.last_opportunities
+        )
 
     def open_best_paper_trade(self):
         """Scan markets and open a trade only when permitted."""
