@@ -123,7 +123,7 @@ class PaperTradingRunner:
             position=position,
         )
 
-        def find_best_opportunity(self):
+    def find_best_opportunity(self):
         """Scan markets using safety counters calculated from saved history."""
 
         history = self.history.load()
