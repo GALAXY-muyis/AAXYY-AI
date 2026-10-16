@@ -216,7 +216,7 @@ trades_today=trades_today,
 consecutive_losses=consecutive_losses,
 daily_loss_percent=daily_loss_percent,
 account_balance=self.executor.balance,
-        )
+    )
 
         return self.scanner.select_best_opportunity(
             self.last_opportunities
