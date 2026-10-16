@@ -124,6 +124,7 @@ class MarketScanner:
         trades_today=0,
         consecutive_losses=0,
         daily_loss_percent=0,
+        account_balance=1000,
     ):
         """Run markets through the pipeline with supplied risk counters."""
 
@@ -148,7 +149,7 @@ class MarketScanner:
                 confidence=market["confidence"],
                 risk_reward=3,
                 momentum=market["momentum"],
-                account_balance=1000,
+                account_balance=account_balance,
                 risk_percent=2,
                 entry_price=entry_price,
                 stop_loss=stop_loss,
@@ -180,6 +181,7 @@ class MarketScanner:
         trades_today=0,
         consecutive_losses=0,
         daily_loss_percent=0,
+        account_balance=1000,
     ):
         """Scan, analyze, apply risk counters, and rank markets."""
 
@@ -191,6 +193,7 @@ class MarketScanner:
             trades_today=trades_today,
             consecutive_losses=consecutive_losses,
             daily_loss_percent=daily_loss_percent,
+            account_balance=account_balance,
         )
 
         for market in pipeline_results:
