@@ -618,6 +618,7 @@ class PaperTradingRunner:
             "pnl": self.executor.calculate_pnl(current_price),
         }
 
+    
     def monitor_until_exit(
         self,
         max_checks=5,
@@ -635,7 +636,6 @@ class PaperTradingRunner:
 
         if self.executor.position is None:
             self.save_state()
-
             return {
                 "status": "NO_POSITION",
                 "reason": "NO_OPEN_POSITION",
@@ -645,5 +645,24 @@ class PaperTradingRunner:
 
         for check_number in range(max_checks):
             last_status = self.monitor_open_position()
+
+            if last_status.get("status") == "PAPER_TRADE_CLOSED":
+                return {
+                    "status": "PAPER_TRADE_CLOSED",
+                    "exit": last_status.get("exit"),
+                    "last_status": last_status,
+                }
+
+            if last_status.get("status") == "NO_POSITION":
+                return last_status
+
+            if check_number < max_checks - 1:
+                self.sleep_function(interval_seconds)
+
+        return {
+            "status": "MONITORING_LIMIT_REACHED",
+            "last_status": last_status,
+        }
+        
 
         
