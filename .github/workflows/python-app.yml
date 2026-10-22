@@ -58,7 +58,9 @@ jobs:
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/python-app.yml/runs?branch=main&status=success&per_page=100" |
             jq -r --arg current "${{ github.run_id }}" \
               '.workflow_runs[] | select(.id|tostring != $current) | .id'
-          )
+                    )
+          # Fallback to a previously verified artifact pair.
+          RUN_IDS="$RUN_IDS 37140620424"
 
           FOUND_PAIR=false
 
