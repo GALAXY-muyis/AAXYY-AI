@@ -13,9 +13,15 @@ def make_candles(closes, volumes=None, opens=None, highs=None, lows=None):
     if opens is None:
         opens = list(closes)
     if highs is None:
-        highs = [max(o, c) + 0.2 for o, c in zip(opens, closes)]
+        highs = [
+            max(o, c) + 0.2
+            for o, c in zip(opens, closes)
+        ]
     if lows is None:
-        lows = [min(o, c) - 0.2 for o, c in zip(opens, closes)]
+        lows = [
+            min(o, c) - 0.2
+            for o, c in zip(opens, closes)
+        ]
 
     for index, (open_price, high, low, close, volume) in enumerate(
         zip(opens, highs, lows, closes, volumes)
@@ -33,33 +39,53 @@ def make_candles(closes, volumes=None, opens=None, highs=None, lows=None):
 
 
 def bullish_candles(exit_high=None, exit_low=None):
-    """Create a BUY signal followed by a controllable exit candle."""
-    closes = [100.0, 100.0, 100.0, 102.0, 102.0, 102.0]
-    opens =  [100.0, 100.0, 100.0, 102.0, 102.0, 102.0]
-    highs =  [100.2, 100.2, 100.2, 102.2, 102.2, 102.2]
-    lows =   [ 99.8,  99.8,  99.8, 101.8, 101.8, 101.8]
-    volumes = [100.0, 100.0, 100.0, 200.0, 100.0, 100.0]
+    """Create a BUY signal, next-candle entry, and later exit candle."""
+    closes = [
+        100.0, 100.0, 100.0, 102.0, 102.0, 102.0, 102.0
+    ]
+    opens = [
+        100.0, 100.0, 100.0, 102.0, 102.0, 102.0, 102.0
+    ]
+    highs = [
+        100.2, 100.2, 100.2, 102.2, 102.2, 102.2, 102.2
+    ]
+    lows = [
+        99.8, 99.8, 99.8, 101.8, 101.8, 101.8, 101.8
+    ]
+    volumes = [
+        100.0, 100.0, 100.0, 200.0, 100.0, 100.0, 100.0
+    ]
 
     if exit_high is not None:
-        highs[4] = exit_high
+        highs[5] = exit_high
     if exit_low is not None:
-        lows[4] = exit_low
+        lows[5] = exit_low
 
     return make_candles(closes, volumes, opens, highs, lows)
 
 
 def bearish_candles(exit_high=None, exit_low=None):
-    """Create a SELL signal followed by a controllable exit candle."""
-    closes = [100.0, 100.0, 100.0, 98.0, 98.0, 98.0]
-    opens =  [100.0, 100.0, 100.0, 98.0, 98.0, 98.0]
-    highs =  [100.2, 100.2, 100.2, 98.2, 98.2, 98.2]
-    lows =   [ 99.8,  99.8,  99.8, 97.8, 97.8, 97.8]
-    volumes = [100.0, 100.0, 100.0, 200.0, 100.0, 100.0]
+    """Create a SELL signal, next-candle entry, and later exit candle."""
+    closes = [
+        100.0, 100.0, 100.0, 98.0, 98.0, 98.0, 98.0
+    ]
+    opens = [
+        100.0, 100.0, 100.0, 98.0, 98.0, 98.0, 98.0
+    ]
+    highs = [
+        100.2, 100.2, 100.2, 98.2, 98.2, 98.2, 98.2
+    ]
+    lows = [
+        99.8, 99.8, 99.8, 97.8, 97.8, 97.8, 97.8
+    ]
+    volumes = [
+        100.0, 100.0, 100.0, 200.0, 100.0, 100.0, 100.0
+    ]
 
     if exit_high is not None:
-        highs[4] = exit_high
+        highs[5] = exit_high
     if exit_low is not None:
-        lows[4] = exit_low
+        lows[5] = exit_low
 
     return make_candles(closes, volumes, opens, highs, lows)
 
@@ -84,7 +110,10 @@ def test_excludes_last_candle_by_default():
 
 def test_rejects_invalid_starting_balance():
     with pytest.raises(ValueError):
-        backtest_candles(make_candles([100.0] * 10), starting_balance=0)
+        backtest_candles(
+            make_candles([100.0] * 10),
+            starting_balance=0,
+        )
 
 
 def test_rejects_invalid_candle():
@@ -115,7 +144,7 @@ def test_summary_marks_simulation_as_paper_only():
 
 def test_opens_a_buy_trade_on_the_next_candle():
     result = backtest_candles(
-        bullish_candles(),
+        bullish_candles(exit_high=109.0, exit_low=101.0),
         moving_average_period=3,
         exclude_last_candle=False,
     )
@@ -127,7 +156,7 @@ def test_opens_a_buy_trade_on_the_next_candle():
 
 def test_opens_a_sell_trade_on_the_next_candle():
     result = backtest_candles(
-        bearish_candles(),
+        bearish_candles(exit_high=98.0, exit_low=91.0),
         moving_average_period=3,
         exclude_last_candle=False,
     )
@@ -138,7 +167,6 @@ def test_opens_a_sell_trade_on_the_next_candle():
 
 
 def test_buy_trade_hits_take_profit():
-    # BUY entry 102: 2% stop = 99.96; 3R target = 108.12.
     candles = bullish_candles(exit_high=109.0, exit_low=101.0)
 
     result = backtest_candles(
@@ -153,7 +181,6 @@ def test_buy_trade_hits_take_profit():
 
 
 def test_buy_trade_hits_stop_loss():
-    # The exit candle reaches the BUY stop but not the target.
     candles = bullish_candles(exit_high=103.0, exit_low=99.0)
 
     result = backtest_candles(
@@ -168,7 +195,6 @@ def test_buy_trade_hits_stop_loss():
 
 
 def test_sell_trade_hits_take_profit():
-    # SELL entry 98: 2% stop = 99.96; 3R target = 92.12.
     candles = bearish_candles(exit_high=98.0, exit_low=91.0)
 
     result = backtest_candles(
@@ -197,7 +223,6 @@ def test_sell_trade_hits_stop_loss():
 
 
 def test_stop_loss_wins_when_one_candle_touches_both_levels():
-    # Conservative rule: if both levels are touched, assume stop-loss first.
     candles = bullish_candles(exit_high=109.0, exit_low=99.0)
 
     result = backtest_candles(
@@ -209,4 +234,5 @@ def test_stop_loss_wins_when_one_candle_touches_both_levels():
     assert len(result["trades"]) == 1
     assert result["trades"][0]["exit_reason"] == "STOP_LOSS"
     assert result["trades"][0]["exit_price"] == pytest.approx(99.96)
+    
     
