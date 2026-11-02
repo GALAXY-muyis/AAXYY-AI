@@ -185,12 +185,9 @@ class PaperTradingRunner:
                     * 100
                 )
 
-        consecutive_losses = 0
+                consecutive_losses = 0
 
-        for trade in reversed(history):
-            if not isinstance(trade, dict):
-                break
-
+        for _, trade in reversed(todays_trades):
             try:
                 pnl = float(trade.get("pnl", 0.0))
             except (TypeError, ValueError):
