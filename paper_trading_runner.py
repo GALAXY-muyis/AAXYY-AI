@@ -134,6 +134,7 @@ class PaperTradingRunner:
                 continue
 
             closed_at = trade.get("closed_at")
+
             if not isinstance(closed_at, str) or not closed_at.strip():
                 continue
 
@@ -190,8 +191,7 @@ class PaperTradingRunner:
                     * 100
                 )
 
-        # Count only consecutive losses from the current UTC day.
-        # Previous days must never carry their loss streak into today.
+        # Only count consecutive losses from the current UTC day.
         for _, trade in reversed(todays_trades):
             try:
                 pnl = float(trade.get("pnl", 0.0))
@@ -645,4 +645,6 @@ class PaperTradingRunner:
         last_status = None
 
         for check_number in range(max_checks):
-            last_status = self.monit
+            last_status = self.monitor_open_position()
+
+            if last_status.get("status") == "PAPER
