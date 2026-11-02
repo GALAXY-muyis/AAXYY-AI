@@ -1,4 +1,6 @@
 
+from datetime import datetime, timezone
+
 import pytest
 
 from historical_signal_backtest import backtest_candles
@@ -234,5 +236,68 @@ def test_stop_loss_wins_when_one_candle_touches_both_levels():
     assert len(result["trades"]) == 1
     assert result["trades"][0]["exit_reason"] == "STOP_LOSS"
     assert result["trades"][0]["exit_price"] == pytest.approx(99.96)
+
+
+def test_consecutive_loss_limit_resets_on_new_utc_day():
+    """Three losses on one UTC day must not block the next day's trade."""
+    closes = [
+        100.0, 100.0, 100.0,
+        102.0, 102.0, 102.0,
+        104.0, 104.0, 104.0,
+        106.0, 106.0, 106.0,
+        108.0, 108.0, 108.0,
+    ]
+
+    volumes = [100.0] * len(closes)
+    for signal_index in (3, 6, 9, 12):
+        volumes[signal_index] = 200.0
+
+    candles = make_candles(closes, volumes)
+
+    # Put the first three losing trades on January 1, 2025.
+    first_day = datetime(
+        2025, 1, 1, 20, 0, tzinfo=timezone.utc
+    )
+    first_day_ms = int(first_day.timestamp() * 1000)
+
+    # The fourth signal begins on January 2, 2025.
+    second_day = datetime(
+        2025, 1, 2, 0, 0, tzinfo=timezone.utc
+    )
+    second_day_ms = int(second_day.timestamp() * 1000)
+
+    for index, candle in enumerate(candles):
+        if index < 12:
+            candle[0] = first_day_ms + index * 900_000
+        else:
+            candle[0] = second_day_ms + (index - 12) * 900_000
+
+    # Force each of the four trades to hit its stop loss.
+    for index in (5, 8, 11, 14):
+        entry_price = closes[index - 1]
+        candles[index][3] = entry_price * 1.01
+        candles[index][4] = entry_price * 0.97
+        candles[index][2] = entry_price * 1.02
+
+    result = backtest_candles(
+        candles,
+        moving_average_period=3,
+        max_consecutive_losses=3,
+        max_daily_loss_percent=100.0,
+        exclude_last_candle=False,
+    )
+
+    assert len(result["trades"]) == 4
+    assert all(
+        trade["exit_reason"] == "STOP_LOSS"
+        for trade in result["trades"]
+    )
+    assert result["trades"][2]["signal_time"].startswith(
+        "2025-01-01"
+    )
+    assert result["trades"][3]["signal_time"].startswith(
+        "2025-01-02"
+    )
+    
     
     
