@@ -1,3 +1,4 @@
+
 import time
 from datetime import datetime, timezone
 
@@ -6,7 +7,6 @@ from bitget_market_universe import BitgetMarketUniverse
 from market_scanner import MarketScanner
 from paper_trade_history import PaperTradeHistory
 from paper_trading_executor import PaperPosition, PaperTradingExecutor
-from paper_trading_state import PaperTradingState
 
 
 class PaperTradingRunner:
@@ -141,9 +141,12 @@ class PaperTradingRunner:
                 timestamp = datetime.fromisoformat(
                     closed_at.replace("Z", "+00:00")
                 )
+
                 if timestamp.tzinfo is None:
                     timestamp = timestamp.replace(tzinfo=timezone.utc)
+
                 timestamp = timestamp.astimezone(timezone.utc)
+
             except (TypeError, ValueError):
                 continue
 
@@ -154,12 +157,14 @@ class PaperTradingRunner:
             for timestamp, trade in timestamped_trades
             if timestamp.date() == today
         ]
+
+        todays_trades.sort(key=lambda item: item[0])
         trades_today = len(todays_trades)
 
         daily_loss_percent = 0.0
+        consecutive_losses = 0
 
         if todays_trades:
-            todays_trades.sort(key=lambda item: item[0])
             daily_pnl = 0.0
 
             for _, trade in todays_trades:
@@ -185,8 +190,8 @@ class PaperTradingRunner:
                     * 100
                 )
 
-                consecutive_losses = 0
-
+        # Count only consecutive losses from the current UTC day.
+        # Previous days must never carry their loss streak into today.
         for _, trade in reversed(todays_trades):
             try:
                 pnl = float(trade.get("pnl", 0.0))
@@ -615,7 +620,6 @@ class PaperTradingRunner:
             "pnl": self.executor.calculate_pnl(current_price),
         }
 
-    
     def monitor_until_exit(
         self,
         max_checks=5,
@@ -641,25 +645,4 @@ class PaperTradingRunner:
         last_status = None
 
         for check_number in range(max_checks):
-            last_status = self.monitor_open_position()
-
-            if last_status.get("status") == "PAPER_TRADE_CLOSED":
-                return {
-                    "status": "PAPER_TRADE_CLOSED",
-                    "exit": last_status.get("exit"),
-                    "last_status": last_status,
-                }
-
-            if last_status.get("status") == "NO_POSITION":
-                return last_status
-
-            if check_number < max_checks - 1:
-                self.sleep_function(interval_seconds)
-
-        return {
-            "status": "MONITORING_LIMIT_REACHED",
-            "last_status": last_status,
-        }
-        
-
-        
+            last_status = self.monit
