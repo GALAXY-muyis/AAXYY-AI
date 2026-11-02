@@ -1,4 +1,3 @@
-
 import time
 from datetime import datetime, timezone
 
@@ -647,4 +646,4 @@ class PaperTradingRunner:
         for check_number in range(max_checks):
             last_status = self.monitor_open_position()
 
-            if last_status.get("status") == "PAPER
+            if last_status.get("status") == "PAPER_
