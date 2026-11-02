@@ -1,3 +1,6 @@
+
+from datetime import datetime, timedelta, timezone
+
 from paper_trading_runner import PaperTradingRunner
 from paper_trade_history import PaperTradeHistory
 
@@ -106,3 +109,80 @@ def test_runner_records_only_closed_trade(monkeypatch, tmp_path):
     assert len(saved_trades) == 1
     assert saved_trades[0]["symbol"] == "BTCUSDT"
     assert saved_trades[0]["reason"] == "TAKE_PROFIT"
+
+
+def test_consecutive_loss_count_resets_on_new_utc_day(
+    monkeypatch,
+    tmp_path,
+):
+    history = PaperTradeHistory(tmp_path / "paper_trade_history.json")
+
+    yesterday = (
+        datetime.now(timezone.utc).date() - timedelta(days=1)
+    )
+
+    history.save([
+        {
+            "symbol": "BTCUSDT",
+            "pnl": -10.0,
+            "balance_after": 990.0,
+            "closed_at": datetime(
+                yesterday.year,
+                yesterday.month,
+                yesterday.day,
+                10,
+                0,
+                tzinfo=timezone.utc,
+            ).isoformat(),
+        },
+        {
+            "symbol": "ETHUSDT",
+            "pnl": -10.0,
+            "balance_after": 980.0,
+            "closed_at": datetime(
+                yesterday.year,
+                yesterday.month,
+                yesterday.day,
+                11,
+                0,
+                tzinfo=timezone.utc,
+            ).isoformat(),
+        },
+        {
+            "symbol": "SOLUSDT",
+            "pnl": -10.0,
+            "balance_after": 970.0,
+            "closed_at": datetime(
+                yesterday.year,
+                yesterday.month,
+                yesterday.day,
+                12,
+                0,
+                tzinfo=timezone.utc,
+            ).isoformat(),
+        },
+    ])
+
+    runner = PaperTradingRunner(
+        symbols=["BTC"],
+        starting_balance=970,
+        history=history,
+    )
+
+    captured = {}
+
+    def fake_scan_opportunities(symbols, **kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.setattr(
+        runner.scanner,
+        "scan_opportunities",
+        fake_scan_opportunities,
+    )
+
+    runner.find_best_opportunity()
+
+    assert captured["consecutive_losses"] == 0
+    assert captured["trades_today"] == 0
+    
