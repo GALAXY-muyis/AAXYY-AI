@@ -120,6 +120,7 @@ def backtest_candles(
     daily_start_balance = {}
     daily_realized_pnl = {}
     consecutive_losses = 0
+    loss_streak_day = None
 
     index = moving_average_period - 1
 
@@ -130,6 +131,12 @@ def backtest_candles(
             signal_candle["timestamp"] / 1000,
             tz=timezone.utc,
         ).date().isoformat()
+
+        # Reset the consecutive-loss guard at each new UTC day.
+        # Daily trade and daily loss limits remain tracked separately.
+        if day != loss_streak_day:
+            consecutive_losses = 0
+            loss_streak_day = day
 
         daily_start_balance.setdefault(day, balance)
         daily_realized_pnl.setdefault(day, 0.0)
@@ -385,4 +392,5 @@ def backtest_candles(
         "ending_balance": balance,
         "trades": trades,
         "summary": summary,
-    }
+                }
+    
